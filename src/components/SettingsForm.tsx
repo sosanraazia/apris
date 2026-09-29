@@ -11,8 +11,8 @@ const FIELDS: [keyof Settings, string, string][] = [
   ["overloadMaxCH", "Absolute ceiling (CH)", "Overload needs DSU approval reference"],
   ["summerMaxCH", "Summer maximum (CH)", ""],
   ["minPassGradePoint", "Minimum passing grade point", "1.0 = D counts as a pass"],
-  ["probationMaxCH", "Probation max CH", "Blank = not configured → no automatic recommendation"],
-  ["relegationMaxCH", "Relegation max CH", "Blank = not configured → no automatic recommendation"],
+  ["probationMaxCH", "Probation max CH", "Blank = registered manually by the advisor (no automatic recommendation yet)"],
+  ["relegationMaxCH", "Relegation max CH", "Blank = registered manually by the advisor (no automatic recommendation yet)"],
   ["finalSemesterMaxCH", "Final-semester max CH", "Blank = use regular ceiling"],
 ];
 

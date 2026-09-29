@@ -133,10 +133,10 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
   let blockAll: string | null = null;
   if (student.standing === "PROBATION") {
     max = s.probationMaxCH;
-    if (max == null) warnings.push("Probation CH limit is not configured (Admin → Settings). Advisor must select courses manually.");
+    if (max == null) warnings.push("Probation students are registered manually for now: choose the courses yourself and record the approval reference. (Automatic rules start once a probation CH limit is configured.)");
   } else if (student.standing === "RELEGATION") {
     max = s.relegationMaxCH;
-    if (max == null) warnings.push("Relegation CH limit is not configured (Admin → Settings). Advisor must select courses manually.");
+    if (max == null) warnings.push("Relegation students are registered manually for now: choose the courses yourself and record the approval reference. (Automatic rules start once a relegation CH limit is configured.)");
   } else if (student.standing !== "NORMAL") {
     blockAll = `Student standing is ${student.standing}`;
     max = null;
@@ -242,7 +242,7 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
     const ch = live.reduce((a, r) => a + r.ch, 0);
     if (!live.length) continue;
     if (max == null) {
-      live.forEach((r) => { r.status = "OPTIONAL"; r.reason += " (Load limit for this standing is not configured — advisor decides.)"; });
+      live.forEach((r) => { r.status = "OPTIONAL"; r.reason += " (Registered manually for this standing — no automatic recommendation yet.)"; });
     } else if (load + ch > max) {
       live.forEach((r) => { r.status = "DEFERRED_BY_LOAD"; r.reason += ` Deferred: adding ${ch} CH would exceed the ${max} CH limit.`; });
     } else load += ch;

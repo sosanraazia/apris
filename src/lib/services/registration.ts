@@ -10,6 +10,8 @@ export interface DraftPayload {
   items: { offeringId: number; overrideReason?: string }[];
   removals: { code: string; reason: string }[];
   loadReason?: string;
+  /** Probation / relegation are registered manually for now: one approval reference covers the whole registration. */
+  manualApproval?: string;
 }
 
 export class RegistrationError extends Error {}
@@ -40,6 +42,12 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
   const phase = effectivePhase(semester);
   if (!canEdit(session.role, phase).allowed) throw new RegistrationError("Registration for this semester is closed. Ask an Admin to reopen the add/drop window.");
 
+  // Probation / relegation: no automatic recommendation yet (limits not configured) → advisor registers manually,
+  // recorded against an approval reference. This switches off automatic rules (per-course reasons, minimum load).
+  const manual = ["PROBATION", "RELEGATION"].includes(st.standing) && rec.load.applicableMax == null;
+  const approval = payload.manualApproval?.trim() ?? "";
+  if (manual && approval.length < 3) throw new RegistrationError(`${st.standing.toLowerCase()} students are registered manually — enter the approval reference (e.g. HoD / committee decision) for this registration.`);
+
   const ids = [...new Set(payload.items.map((i) => i.offeringId))];
   if (ids.length !== payload.items.length) throw new RegistrationError("The same offering was selected twice");
   const offerings = await db.offering.findMany({ where: { id: { in: ids }, semesterId: semester.id, active: true } });
@@ -63,7 +71,7 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
       !!recItem &&
       (recItem.status === "RECOMMENDED" || recItem.status === "ELECTIVE_CHOICE") &&
       (recItem.suggested == null || recItem.suggested.offeringId === String(o.id));
-    const override = item.overrideReason?.trim() || null;
+    const override = item.overrideReason?.trim() || (manual ? `Manual registration (${st.standing.toLowerCase()}): ${approval}` : null);
     if (!standard && !override)
       throw new RegistrationError(`${o.courseCode} ${o.courseName}: a reason is required (${recItem ? recItem.status.replaceAll("_", " ").toLowerCase() : "not in the recommendation"}${recItem?.suggested ? " / section changed" : ""}).`);
     resolved.push({ offeringId: o.id, code: o.courseCode, ch, reason: recItem?.reason ?? "Added by advisor", override: standard ? null : override, recommended: standard, recItem });
@@ -84,18 +92,19 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
   const applicable = rec.load.applicableMax ?? settings.regularMaxCH;
   if (total > applicable && !payload.loadReason?.trim())
     throw new RegistrationError(`Total ${total} CH is above the ${applicable} CH limit — record the overload approval reference.`);
-  if (total < settings.minLoadCH && resolved.length && !payload.loadReason?.trim())
+  if (!manual && total < settings.minLoadCH && resolved.length && !payload.loadReason?.trim())
     throw new RegistrationError(`Total ${total} CH is below the ${settings.minLoadCH} CH minimum — record the reason.`);
 
-  // soft check: a lab normally sits in the same section as its theory course
-  const warnings: string[] = [];
+  // Hard rule: a lab must sit in the same section as its theory course (when both are registered together).
   const secOf = new Map(offerings.map((o) => [o.id, o] as const));
   for (const lab of resolved.filter((r) => /L$/.test(r.code))) {
     const lo = secOf.get(lab.offeringId)!;
     const theory = resolved.find((r) => !/L$/.test(r.code) && courseKey(r.code, secOf.get(r.offeringId)!.courseName) === theoryKeyOf(courseKey(lo.courseCode, lo.courseName)));
     const to = theory && secOf.get(theory.offeringId);
-    if (to && to.section !== lo.section) warnings.push(`${lo.courseName}: theory is in ${to.section} but lab is in ${lo.section}.`);
+    if (to && to.section !== lo.section)
+      throw new RegistrationError(`${to.courseName}: the lab must be in the same section as the theory course (theory is in ${to.section ?? "no section"}, lab is in ${lo.section ?? "no section"}).`);
   }
+  const warnings: string[] = [];
 
   const labels = new Map((await db.offering.findMany({ where: { semesterId: semester.id } })).map((o) => [o.id, `${o.courseCode} ${o.courseName} [${o.section ?? "no section"} · CBA ${o.cbaCode ?? "—"}]`]));
   const label = (i: { offeringId: number }) => labels.get(i.offeringId) ?? `offering #${i.offeringId}`;
@@ -118,7 +127,7 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
     studentRegId: st.registrationId,
     before: before.map(label),
     after: resolved.map((r) => label({ offeringId: r.offeringId })),
-    reason: [...resolved.filter((r) => r.override).map((r) => `${r.code}: ${r.override}`), ...removals.map((r) => `removed ${r.code}: ${r.reason}`), payload.loadReason].filter(Boolean).join(" | ") || null,
+    reason: [manual ? `MANUAL (${st.standing.toLowerCase()}) approval: ${approval}` : null, ...resolved.filter((r) => r.override && !manual).map((r) => `${r.code}: ${r.override}`), ...removals.map((r) => `removed ${r.code}: ${r.reason}`), payload.loadReason].filter(Boolean).join(" | ") || null,
   });
   return { total, count: resolved.length, warnings };
 }

@@ -26,10 +26,11 @@ const D = process.cwd() + "/data/sample/";
   await attempt("omit recommended Discrete+LA w/o reason", { items: ok, removals: [] });
   await attempt("valid: 5 courses + reasons for removed", { items: ok, removals: [{ code: "CS-1003", reason: "Section clash" }, { code: "BS-1302", reason: "CBA missing in sheet" }], loadReason: "below min accepted" });
   try { await finalize(sess, st.id); console.log("finalize v1 ok"); } catch (e) { console.log("finalize:", (e as Error).message); }
-  await attempt("wrong section without reason", { items: [{ offeringId: offer("CS-2007", "SE-3B") }, ...ok.slice(1)], removals: [{ code: "CS-1003", reason: "x" }, { code: "BS-1302", reason: "x" }], loadReason: "low" });
+  await attempt("theory SE-3B but lab left in SE-3A (must be rejected: same section rule)", { items: [{ offeringId: offer("CS-2007", "SE-3B"), overrideReason: "SE-3A full" }, ...ok.slice(1)], removals: [{ code: "CS-1003", reason: "x" }, { code: "BS-1302", reason: "x" }], loadReason: "low" });
+  await attempt("wrong section without reason", { items: [{ offeringId: offer("CS-2007", "SE-3B") }, { offeringId: offer("CS-2007L", "SE-3B") }, ...ok.slice(2)], removals: [{ code: "CS-1003", reason: "x" }, { code: "BS-1302", reason: "x" }], loadReason: "low" });
   await attempt("passed course re-registration", { items: [...ok, { offeringId: ctx.offerings.find((o) => o.courseCode === "BS-2301")!.dbId, overrideReason: "ahead" }, { offeringId: 1 }], removals: [] });
   // change section w/ reason, finalize v2
-  await attempt("section change w/ reason", { items: [{ offeringId: offer("CS-2007", "SE-3B"), overrideReason: "SE-3A full" }, ...ok.slice(1)], removals: [{ code: "CS-1003", reason: "clash" }, { code: "BS-1302", reason: "no CBA" }], loadReason: "low" });
+  await attempt("section change w/ reason (theory + lab together)", { items: [{ offeringId: offer("CS-2007", "SE-3B"), overrideReason: "SE-3A full" }, { offeringId: offer("CS-2007L", "SE-3B"), overrideReason: "SE-3A full" }, ...ok.slice(2)], removals: [{ code: "CS-1003", reason: "clash" }, { code: "BS-1302", reason: "no CBA" }], loadReason: "low" });
   try { await finalize(sess, st.id); } catch (e) { console.log("finalize w/o reason:", (e as Error).message); }
   try { console.log("finalize v2:", JSON.stringify(await finalize(sess, st.id, "Section full"))); } catch (e) { console.log("finalize v2 err:", (e as Error).message); }
   const out = await buildExportCsv(sess, { markExported: false });

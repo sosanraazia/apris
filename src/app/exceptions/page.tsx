@@ -8,6 +8,7 @@ export default async function Exceptions() {
   const s = await requireRole("ADMIN", "HOD");
   const settings = await getSettings();
   const sem = await db.semester.findFirst({ where: { active: true } });
+  const manualRegs = await db.registration.findMany({ where: { semesterId: sem?.id ?? -1, student: { standing: { in: ["PROBATION", "RELEGATION"] }, archivedAt: null } }, include: { items: true } });
   const [students, overrides, offeringIssues] = await Promise.all([
     db.student.findMany({ where: { archivedAt: null }, include: { snapshots: { where: { active: true }, take: 1 } } }),
     db.registrationItem.findMany({ where: { overrideReason: { not: null }, registration: { semesterId: sem?.id ?? -1 } }, include: { registration: { include: { student: true } } } }),
@@ -18,11 +19,14 @@ export default async function Exceptions() {
   for (const st of students) {
     const warn = st.snapshots[0] ? (JSON.parse(st.snapshots[0].warnings) as string[]) : [];
     warn.forEach((w) => ex.push({ student: st.registrationId, id: st.id, kind: "Extraction warning", severity: "Medium", owner: "Advisor", detail: w }));
-    if ((st.standing === "PROBATION" && settings.probationMaxCH == null) || (st.standing === "RELEGATION" && settings.relegationMaxCH == null))
-      ex.push({ student: st.registrationId, id: st.id, kind: "Standing limit not configured", severity: "High", owner: "Admin", detail: `${st.standing} CH limit is unset — no automatic recommendation` });
+    if ((st.standing === "PROBATION" && settings.probationMaxCH == null) || (st.standing === "RELEGATION" && settings.relegationMaxCH == null)) {
+      const reg = manualRegs.find((r) => r.studentId === st.id && r.items.length);
+      if (reg) ex.push({ student: st.registrationId, id: st.id, kind: `Manual registration to review (${st.standing.toLowerCase()})`, severity: "Medium", owner: "HoD", detail: `${reg.items.length} course(s) — ${(reg.items[0].overrideReason ?? "").replace(/^Manual registration \([a-z]+\): /, "approval: ")}` });
+      else ex.push({ student: st.registrationId, id: st.id, kind: `Awaiting manual registration (${st.standing.toLowerCase()})`, severity: "Low", owner: "Advisor", detail: "No automatic recommendation for this standing yet — register manually with an approval reference" });
+    }
     if (["FROZEN", "INACTIVE", "WITHDRAWN"].includes(st.standing)) ex.push({ student: st.registrationId, id: st.id, kind: "Non-active standing", severity: "Low", owner: "Advisor", detail: st.standing });
   }
-  for (const o of overrides) ex.push({ student: o.registration.student.registrationId, id: o.registration.studentId, kind: "Advisor override", severity: "Low", owner: "HoD", detail: `${o.posCourseCode}: ${o.overrideReason}` });
+  for (const o of overrides.filter((x) => !x.overrideReason?.startsWith("Manual registration"))) ex.push({ student: o.registration.student.registrationId, id: o.registration.studentId, kind: "Advisor override", severity: "Low", owner: "HoD", detail: `${o.posCourseCode}: ${o.overrideReason}` });
   const tone = { High: "red", Medium: "amber", Low: "slate" } as const;
   return (
     <div className="space-y-4">

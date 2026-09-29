@@ -40,14 +40,19 @@ Fixed inputs live in `data/`: POS PDFs, `Fall2026CourseOffering.xlsx`, `PreReqRu
 
 Student e-mail sending (the version records `email: deferred`), probation/relegation CSV upload (standing is set by Admin per student), timetable/seat capacity, LDAP/SSO (auth is provider-shaped: `User.authProvider`), ERP enrolment, HoD bulk approval, POS upload UI (POS are seeded).
 
-## Assumptions to confirm
+## Decisions confirmed by the department
 
-1. A grade point ≥ 1.0 (D) is a pass (`minPassGradePoint`, admin-editable). W / I / F are not.
-2. Multiple prerequisites for one course are all required (AND). Labs inherit their theory course's prerequisites.
-3. `Cyber Security` (BS-CYS-2024) is treated as `Introduction to Cyber Security` for the CYS prerequisite chain.
-4. Target semester = the number in the home section (`SE-3A` → 3).
-5. Probation / relegation / final-semester CH limits are **not configured** → those students get no automatic recommendation until an Admin sets the numbers.
-6. Zero-credit courses don't count toward load.
+1. **A grade of D counts as a pass** (grade point ≥ 1.0; `minPassGradePoint`, admin-editable). W / I / F do not.
+2. **A lab must sit in the same section as its theory course.** This is enforced when saving a registration (not just a warning); the review screen moves the lab automatically when the theory section changes.
+3. **Probation and relegation students are registered manually for now.** No automatic recommendation; the advisor chooses the courses and enters one **approval reference** that is stored against every course, written to the audit log, and listed for HoD review under *Exceptions*. The 21 CH ceiling still applies; per-course reasons and the 12 CH minimum are not required. Automatic, rule-based handling will start once a probation / relegation CH limit is set in Admin → Settings.
+
+## Other assumptions
+
+1. Multiple prerequisites for one course are all required (AND). Labs inherit their theory course's prerequisites.
+2. `Cyber Security` (BS-CYS-2024) is treated as `Introduction to Cyber Security` for the CYS prerequisite chain.
+3. Target semester = the number in the home section (`SE-3A` → 3), or the number of completed terms + 1 if no section is set.
+4. Final-semester CH limit is not configured (the regular ceiling applies).
+5. Zero-credit courses don't count toward load.
 
 ## Known data problems in the Fall 2026 workbook (surfaced in the app, not hidden)
 

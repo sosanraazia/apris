@@ -82,7 +82,7 @@ describe.skipIf(!HAS_SAMPLES)("recommendation for the sample student", () => {
   it("does not auto-recommend for probation when the limit is unset", async () => {
     const { student, off, prereqs } = await sample("SE-3A", "PROBATION");
     const rec = recommend(student, prereqs, off, DEFAULT_SETTINGS);
-    expect(rec.warnings.join(" ")).toMatch(/Probation CH limit is not configured/);
+    expect(rec.warnings.join(" ")).toMatch(/registered manually/);
     expect(rec.items.some((i) => i.status === "RECOMMENDED")).toBe(false);
   });
 });

@@ -148,6 +148,9 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
         phase={phase}
         phaseLabel={PHASE_LABEL[phase]}
         lateAdmin={perm.late && perm.allowed}
+        manual={["PROBATION", "RELEGATION"].includes(ctx.input.standing) && ctx.rec.load.applicableMax == null}
+        standing={ctx.input.standing}
+        savedApproval={(reg?.items.find((i) => i.overrideReason?.startsWith("Manual registration"))?.overrideReason ?? "").replace(/^Manual registration \([a-z]+\): /, "")}
         items={ctx.rec.items}
         offerings={allOfferings}
         saved={(reg?.items ?? []).map((i) => ({ offeringId: i.offeringId, overrideReason: i.overrideReason }))}
