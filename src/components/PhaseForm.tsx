@@ -11,6 +11,7 @@ export function PhaseForm({ phase, ends }: { phase: string; ends: string }) {
         <div>
           <label className={label} htmlFor="phase">Phase</label>
           <select id="phase" name="phase" defaultValue={phase} className={input}>
+            <option value="SETUP">Setup — offerings being prepared; advisors can preview suggestions only</option>
             <option value="REGISTRATION">Registration — advisors register students</option>
             <option value="ADD_DROP">Add / Drop — changes create a new version with a reason</option>
             <option value="CLOSED">Closed — locked (Admin late changes only)</option>

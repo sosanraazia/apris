@@ -38,31 +38,47 @@ export interface PlanCourse {
 const PLAN_ROW = new RegExp(`^(\\d+) (${CODE_TOKEN}) (.+) (\\d)$`);
 const SKIP = /^(S\. No\.|Course Course Title|Code Hours|Total\b|Powered by|Page \d+ of|Date of Issue|Reg No|Name:)/i;
 
+export interface ParsedPlan {
+  courses: PlanCourse[];
+  /** Each semester's printed "Total N" line, used to cross-check the extracted courses. */
+  semesterTotals: Record<number, number>;
+}
+
 /** Parse "Semester N" blocks of course rows (used by POS PDFs and Fulfillment Reports). */
-export function parsePlanCourses(lines: string[]): PlanCourse[] {
-  const out: PlanCourse[] = [];
+export function parsePlan(lines: string[]): ParsedPlan {
+  const courses: PlanCourse[] = [];
+  const semesterTotals: Record<number, number> = {};
   let sem = 0;
-  for (const line of lines) {
+  for (const raw of lines) {
+    let line = raw.trim();
+    // A semester's "Total N" can land on the same text line as the next heading or row (they sit at nearly the same
+    // height). Peel it off first so the heading/row is still recognised.
+    const lead = line.match(/^Total (\d+)\s+(?=\S)/);
+    if (lead) { if (sem) semesterTotals[sem] = Number(lead[1]); line = line.slice(lead[0].length); }
+    const trail = line.match(/^(.*\S)\s+Total (\d+)$/);
+    if (trail && (/^Semester \d+$/.test(trail[1]) || /^\d+ \S+ .+ \d$/.test(trail[1]))) { if (sem) semesterTotals[sem] = Number(trail[2]); line = trail[1]; }
+    const alone = line.match(/^Total (\d+)$/);
+    if (alone) { if (sem) semesterTotals[sem] = Number(alone[1]); continue; }
+
     const sm = line.match(/^Semester (\d+)$/);
-    if (sm) {
-      sem = Number(sm[1]);
-      continue;
-    }
+    if (sm) { sem = Number(sm[1]); continue; }
     if (!sem) continue;
     const m = line.match(PLAN_ROW);
     if (m) {
       const code = normCode(m[2]);
       // footer values ("137 30") can bleed onto the last row of a page; strip stray trailing numbers
       const title = m[3].replace(/(?: \d{2,3}){1,2}$/, "").trim();
-      out.push({ semester: sem, code, title, ch: Number(m[4]), isPlaceholder: /X/.test(code) });
+      courses.push({ semester: sem, code, title, ch: Number(m[4]), isPlaceholder: /X/.test(code) });
       continue;
     }
-    if (SKIP.test(line) || /^Total/i.test(line) || !out.length) continue;
+    if (SKIP.test(line) || !courses.length) continue;
     if (/^\d+ /.test(line)) continue;
-    out[out.length - 1].title += " " + line.trim();
+    courses[courses.length - 1].title += " " + line;
   }
-  return out;
+  return { courses, semesterTotals };
 }
+
+export const parsePlanCourses = (lines: string[]) => parsePlan(lines).courses;
 
 export type PosVariant = "REGULAR" | "MINORITIES" | "PREMED" | "MINORITIES_PREMED" | "SPECIAL";
 

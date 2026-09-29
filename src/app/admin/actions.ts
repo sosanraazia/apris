@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { saveSetting } from "@/lib/settings";
 import { redirect } from "next/navigation";
-import { SemesterError, openSemester } from "@/lib/services/semesters";
+import { SemesterError, openRegistrations, openSemester } from "@/lib/services/semesters";
+import { PosError, applyPosDraft, buildPosDraft, loadPosDraft, setPosPublished } from "@/lib/services/pos";
 import { audit } from "@/lib/services/audit";
 import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
 import type { Settings } from "@/lib/rules/types";
@@ -55,7 +56,7 @@ export async function fixOfferingAction(form: FormData) {
 export async function setPhaseAction(_: { ok?: string; error?: string } | undefined, form: FormData) {
   const s = await requireRole("ADMIN");
   const phase = String(form.get("phase"));
-  if (!["REGISTRATION", "ADD_DROP", "CLOSED"].includes(phase)) return { error: "Unknown phase" };
+  if (!["SETUP", "REGISTRATION", "ADD_DROP", "CLOSED"].includes(phase)) return { error: "Unknown phase" };
   const endsRaw = String(form.get("addDropEnds") ?? "");
   const ends = phase === "ADD_DROP" && endsRaw ? new Date(endsRaw + "T23:59:59") : null;
   if (ends && Number.isNaN(ends.getTime())) return { error: "Invalid end date" };
@@ -107,4 +108,59 @@ export async function openSemesterAction(_: { ok?: string; error?: string } | un
     if (e instanceof SemesterError) return { error: e.message };
     throw e;
   }
+}
+
+export async function openRegistrationsAction(): Promise<{ ok?: string; error?: string }> {
+  const s = await requireRole("ADMIN");
+  try {
+    const r = await openRegistrations(s);
+    revalidatePath("/", "layout");
+    return { ok: `Registrations for ${r.semester} are open.${r.incomplete ? ` Note: ${r.incomplete} offering row(s) still lack a CBA code or section, so those courses can't be finalized yet.` : ""}` };
+  } catch (e) {
+    if (e instanceof SemesterError) return { error: e.message };
+    throw e;
+  }
+}
+
+export async function uploadPosAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const f = form.get("pdf");
+  if (!(f instanceof File) || !f.size) return { error: "Choose a Plan of Study PDF." };
+  if (!/\.pdf$/i.test(f.name)) return { error: "The file must be a PDF." };
+  let id: string;
+  try {
+    const draft = await buildPosDraft({ createdBy: s.userId, fileName: f.name, buffer: Buffer.from(await f.arrayBuffer()) });
+    id = draft.id;
+    await audit({ userId: s.userId, action: "POS_UPLOADED", reason: `${draft.fileName}: ${draft.items.length} variant(s)` });
+  } catch (e) {
+    if (e instanceof PosError) return { error: e.message };
+    throw e;
+  }
+  redirect(`/admin/pos/review/${id}`);
+}
+
+export async function applyPosAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const draft = await loadPosDraft(String(form.get("draftId") ?? ""));
+  if (!draft || draft.createdBy !== s.userId) return { error: "This upload has expired — upload the PDF again." };
+  try {
+    await applyPosDraft(draft, { keys: form.getAll("key").map(String), publish: form.get("publish") === "on", userId: s.userId });
+  } catch (e) {
+    if (e instanceof PosError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/admin/pos");
+  redirect("/admin/pos?imported=1");
+}
+
+export async function setPosPublishedAction(posId: number, publish: boolean): Promise<{ ok?: string; error?: string }> {
+  const s = await requireRole("ADMIN");
+  try {
+    await setPosPublished(s.userId, posId, publish);
+  } catch (e) {
+    if (e instanceof PosError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/admin/pos");
+  return { ok: publish ? "Published — it can now be assigned to students." : "Unpublished." };
 }

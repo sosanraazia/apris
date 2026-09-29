@@ -21,7 +21,7 @@ export default async function Students({ searchParams }: PageProps<"/students">)
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <div><h1 className="text-xl font-semibold">Students</h1>{sem && <p className="text-xs text-slate-500">{sem.name} · <Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge></p>}</div>
+        <div><h1 className="text-xl font-semibold">Students</h1>{sem && <p className="text-xs text-slate-500">{sem.name} · <Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" || effectivePhase(sem) === "SETUP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge></p>}</div>
         <form className="ml-auto flex gap-2"><input name="q" defaultValue={q} placeholder="Search Registration ID or name" className={`${input} w-72`} /><button className={btn}>Search</button></form>
         {s.role === "ADMIN" && <Link href={showArchived ? "/students" : "/students?archived=1"} className={btnGhost}>{showArchived ? "Show active" : "Show archived"}</Link>}
         {s.role !== "HOD" && <Link href="/students/new" className={btn}>+ Add New Student</Link>}

@@ -23,7 +23,7 @@ const ok = (c: boolean, m: string) => console.log(c ? "✔" : "✖", m);
   if (unexported) await expect("blocked while registrations are unexported", () => openSemester(admin, "Spring 2027", { force: false }), /never exported/);
 
   const sem = await openSemester(admin, "  spring   2027 ", { force: true });
-  ok(sem.name === "Spring 2027" && sem.active && sem.phase === "REGISTRATION", "opened 'Spring 2027' (name normalised)");
+  ok(sem.name === "Spring 2027" && sem.active && sem.phase === "SETUP", "opened 'Spring 2027' in SETUP (registrations not open yet)");
   ok(!(await db.semester.findUniqueOrThrow({ where: { name: "Fall 2026" } })).active, "Fall 2026 closed & no longer active");
   ok((await db.semester.findUniqueOrThrow({ where: { name: "Fall 2026" } })).phase === "CLOSED", "Fall 2026 phase = CLOSED; its registrations are kept");
   ok((await db.registration.count({ where: { semester: { name: "Fall 2026" } } })) > 0, "old registrations still on record");
@@ -42,5 +42,9 @@ const ok = (c: boolean, m: string) => console.log(c ? "✔" : "✖", m);
   ctx = (await computeForStudent(st.id))!;
   ok(ctx.semester?.name === "Spring 2027" && ctx.rec.items.some((i) => i.status === "RECOMMENDED"), "suggestions are live for Spring 2027");
   ok((await db.registration.count({ where: { studentId: st.id, semester: { name: "Spring 2027" } } })) === 0, "student starts Spring 2027 with a clean registration");
+  const { openRegistrations } = await import("../src/lib/services/semesters");
+  const opened = await openRegistrations(admin);
+  ok(opened.offerings === d.rows.length && (await db.semester.findUniqueOrThrow({ where: { name: "Spring 2027" } })).phase === "REGISTRATION", `Admin opens registrations → phase REGISTRATION (${opened.incomplete} rows still incomplete)`);
+  try { await openRegistrations(admin); ok(false, "double open allowed"); } catch (e) { ok(e instanceof SemesterError, "opening twice is refused"); }
   await db.$disconnect();
 })();

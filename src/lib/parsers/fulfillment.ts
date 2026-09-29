@@ -1,5 +1,5 @@
 import { pdfPages } from "./pdfText";
-import { PlanCourse, ProgramCode, PosVariant, parsePlanCourses, parsePosLabel, programFromText } from "./common";
+import { PlanCourse, ProgramCode, PosVariant, parsePlan, parsePosLabel, programFromText } from "./common";
 
 export interface PosDoc {
   program: ProgramCode;
@@ -8,6 +8,8 @@ export interface PosDoc {
   variant: PosVariant;
   courses: PlanCourse[];
   totalRequired: number | null;
+  /** Printed per-semester totals, for cross-checking the extraction. */
+  semesterTotals: Record<number, number>;
 }
 
 /** Parse one Plan of Study page (also the body of a Fulfillment Report). */
@@ -16,7 +18,8 @@ function parsePlanPage(flat: string[], cols: string[]): PosDoc | null {
   const label = parsePosLabel(header);
   if (!label) return null;
   const req = flat.join(" ").match(/Total Credit Hours Required:?\s*(\d+)/i);
-  return { ...label, courses: parsePlanCourses(cols), totalRequired: req ? Number(req[1]) : null };
+  const plan = parsePlan(cols);
+  return { ...label, courses: plan.courses, semesterTotals: plan.semesterTotals, totalRequired: req ? Number(req[1]) : null };
 }
 
 /** Plan of Study PDF: one POS variant per page. */

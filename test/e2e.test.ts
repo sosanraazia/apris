@@ -144,3 +144,20 @@ describe.skipIf(!HAS_SAMPLES)("rules on synthetic students", () => {
     expect(dsa.choices.length).toBe(3);
   });
 });
+
+describe("POS PDFs: every semester matches its printed total", () => {
+  it("all 17 variants have 8 semesters and each semester's courses add up to that semester's printed Total", async () => {
+    const all = [...(await parsePosPdf(d("SoftwareEngineering_PoS.pdf"))), ...(await parsePosPdf(d("CyberSecurity_PoS.pdf")))];
+    expect(all).toHaveLength(17);
+    for (const p of all) {
+      const label = `${p.posCode} ${p.variant}`;
+      const sems = [...new Set(p.courses.map((c) => c.semester))].sort((a, b) => a - b);
+      expect(sems, label + " semesters").toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+      for (const [sem, stated] of Object.entries(p.semesterTotals)) {
+        const got = p.courses.filter((c) => c.semester === Number(sem)).reduce((a, c) => a + c.ch, 0);
+        expect(got, `${label} semester ${sem}`).toBe(stated);
+      }
+      expect(Object.keys(p.semesterTotals).length, label + " printed totals found").toBe(8);
+    }
+  });
+});

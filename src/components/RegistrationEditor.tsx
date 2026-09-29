@@ -84,6 +84,7 @@ export function RegistrationEditor(p: Props) {
 
   return (
     <div className="space-y-4">
+      {p.phase === "SETUP" && <Notice tone="blue"><b>Registrations aren&apos;t open yet.</b> You can review the suggestions below; saving and finalizing become available when an Admin opens registrations.</Notice>}
       {p.phase === "ADD_DROP" && <Notice tone="blue"><b>Add / Drop phase.</b> Tick a course to <b>add</b> it, untick to <b>drop</b> it, or change its section. Save the draft, then finalize with a reason — this creates a new registration version.</Notice>}
       {p.phase === "CLOSED" && <Notice tone="red"><b>Registration is closed.</b> {p.lateAdmin ? "As Admin you can still make a late change; it is flagged and needs a reason." : "Ask an Admin to reopen the add/drop window."}</Notice>}
       {p.warnings.map((w) => <Notice key={w} tone="amber">{w}</Notice>)}

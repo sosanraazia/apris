@@ -7,6 +7,7 @@ import { SettingsForm } from "@/components/SettingsForm";
 import { fixOfferingAction } from "./actions";
 import { PhaseForm } from "@/components/PhaseForm";
 import { OfferingUploadForm } from "@/components/OfferingForms";
+import { OpenRegistrationsButton } from "@/components/OpenRegistrationsButton";
 import { semesterReadiness } from "@/lib/services/semesters";
 import { effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 
@@ -43,19 +44,21 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><div className="flex gap-2"><Link href="/admin/semesters" className={btnGhost}>Semesters</Link><Link href="/admin/users" className={btnGhost}>Manage users</Link></div></div>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><div className="flex gap-2"><Link href="/admin/semesters" className={btnGhost}>Semesters</Link><Link href="/admin/pos" className={btnGhost}>Plans of Study</Link><Link href="/admin/users" className={btnGhost}>Manage users</Link></div></div>
       {ready.semester && (
-        <Card title={`${ready.semester.name} — readiness`} right={<Badge tone={ready.ready ? "green" : "amber"}>{ready.ready ? "suggestions live" : "waiting for offerings"}</Badge>}>
+        <Card title={`${ready.semester.name} — readiness`} right={<Badge tone={ready.registrationsOpen ? "green" : "amber"}>{ready.registrationsOpen ? "registrations open" : ready.ready ? "suggestions live · registrations not open" : "waiting for offerings"}</Badge>}>
           <ol className="space-y-2 text-sm">
             <li>✅ Semester open</li>
-            <li>{ready.ready ? "✅" : "⬜"} Course offerings uploaded — {ready.offeringCount ? `${ready.offeringCount} rows` : "none yet (use “Re-upload course offerings” below)"}{ready.rowsNeedingFixes > 0 && <span className="text-amber-700"> · {ready.rowsNeedingFixes} rows still need a CBA code or section</span>}</li>
+            <li>{ready.ready ? "✅" : "⬜"} Course offerings uploaded — {ready.offeringCount ? `${ready.offeringCount} rows` : "none yet (use “Upload course offerings” below, or the Semesters page)"}{ready.rowsNeedingFixes > 0 && <span className="text-amber-700"> · {ready.rowsNeedingFixes} rows still need a CBA code or section</span>}</li>
             <li>{ready.students && ready.profilesCurrent === ready.students ? "✅" : "⬜"} Student documents refreshed — {ready.profilesCurrent} of {ready.students} students</li>
+            <li>{ready.registrationsOpen ? "✅" : "⬜"} Registrations opened for advisors</li>
           </ol>
-          <p className="mt-3 text-xs text-slate-500">Advisors get suggestions as soon as offerings are applied; refreshed documents make them accurate.</p>
+          <p className="mt-3 text-xs text-slate-500">Advisors see suggestions as soon as offerings are applied; they can only save and finalize registrations after you open registrations.</p>
+          {!ready.registrationsOpen && <div className="mt-3"><OpenRegistrationsButton disabledReason={ready.ready ? undefined : "Upload and apply the course offerings first."} /></div>}
         </Card>
       )}
       {sem && (
-        <Card title={`Registration phase — ${sem.name}`} right={<Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge>}>
+        <Card title={`Registration phase — ${sem.name}`} right={<Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" || effectivePhase(sem) === "SETUP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge>}>
           <PhaseForm phase={sem.phase} ends={sem.addDropEnds ? sem.addDropEnds.toISOString().slice(0, 10) : ""} />
         </Card>
       )}
@@ -69,7 +72,7 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
           <div className="-mx-5 mt-2 overflow-x-auto"><table className="w-full"><tbody className="divide-y divide-slate-100">{offerings.map((o) => <Row key={o.id} o={o} />)}</tbody></table></div></details>
       </Card>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title={`Plans of Study (${pos.length} variants, all published)`}>
+        <Card title={`Plans of Study (${pos.length} variants, ${pos.filter((p) => p.published).length} published)`} right={<Link href="/admin/pos" className={btnGhost}>Manage / upload</Link>}>
           <ul className="space-y-1 text-sm">{pos.map((p) => (<li key={p.id} className="flex justify-between"><span>{p.posCode} <span className="text-slate-500">{p.variant.replaceAll("_", " ").toLowerCase()}</span></span><span className="text-slate-500">{p.totalRequired} CH · {p._count.students} students</span></li>))}</ul>
         </Card>
         <Card title={`Prerequisites (${prereq.length})`}>
