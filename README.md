@@ -19,6 +19,18 @@ npm test                       # parser + rules-engine tests
 
 Fixed inputs live in `data/`: POS PDFs, `Fall2026CourseOffering.xlsx`, `PreReqRules.xlsx`, `AcademicStatusRules.xlsx`. Re-run `npm run seed` after changing them. `data/sample/` (real student PDFs) and `storage/` (uploads) are git-ignored — treat them as personal data.
 
+## Documentation
+
+| For | Document |
+|---|---|
+| Advisors | [docs/ADVISOR_GUIDE.md](docs/ADVISOR_GUIDE.md) |
+| Admins / IT (app + server + emergencies) | [docs/ADMIN_RUNBOOK.md](docs/ADMIN_RUNBOOK.md) |
+| Installing on the university VM | [deploy/README.md](deploy/README.md) |
+| Security model | [SECURITY.md](SECURITY.md) |
+| Product requirements | [docs/PRD.md](docs/PRD.md) |
+
+Server-side commands (run on the VM, never through the web app): `npm run admin:reset -- <username>` (emergency password reset), `npm run prereq:reload` (reload prerequisite rules from `data/PreReqRules.xlsx`).
+
 ## What works
 
 | Area | Status |

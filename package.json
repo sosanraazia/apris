@@ -11,7 +11,9 @@
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts",
     "seed:init": "tsx prisma/seed.ts --init",
-    "dev:credentials": "tsx scripts/dev-credentials.ts"
+    "dev:credentials": "tsx scripts/dev-credentials.ts",
+    "admin:reset": "tsx scripts/admin-reset-password.ts",
+    "prereq:reload": "tsx scripts/reload-prerequisites.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
