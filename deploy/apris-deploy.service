@@ -1,0 +1,9 @@
+[Unit]
+Description=APRIS pull-based deploy from GitHub
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=apris
+Group=apris
+ExecStart=/opt/apris/deploy.sh

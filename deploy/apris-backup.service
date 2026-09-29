@@ -1,0 +1,7 @@
+[Unit]
+Description=APRIS nightly backup
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/apris/current/deploy/backup.sh

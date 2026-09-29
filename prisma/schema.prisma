@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String   @unique
+  name         String
+  passwordHash String?
+  mustChangePassword Boolean @default(false)
+  role         String // ADMIN | HOD | ADVISOR
+  department   String?
+  authProvider String   @default("LOCAL") // LOCAL | LDAP | ACTIVE_DIRECTORY | ENTRA_ID
+  externalId   String?
+  active       Boolean  @default(true)
+  students     Student[]
+}
+
+model Setting {
+  key   String @id
+  value String // JSON
+}
+
+model Pos {
+  id            Int         @id @default(autoincrement())
+  posCode       String // BS-SE-2024
+  program       String // SE | CYS
+  year          Int
+  variant       String // REGULAR | MINORITIES | PREMED | MINORITIES_PREMED | SPECIAL
+  totalRequired Int
+  published     Boolean     @default(false)
+  courses       PosCourse[]
+  students      Student[]
+
+  @@unique([posCode, variant])
+}
+
+model PosCourse {
+  id            Int     @id @default(autoincrement())
+  posId         Int
+  pos           Pos     @relation(fields: [posId], references: [id], onDelete: Cascade)
+  semester      Int
+  seq           Int
+  code          String
+  title         String
+  ch            Int
+  isPlaceholder Boolean @default(false)
+}
+
+model Prerequisite {
+  id           Int    @id @default(autoincrement())
+  course       String
+  prerequisite String
+  rule         String @default("Must Pass")
+}
+
+model Semester {
+  id            Int        @id @default(autoincrement())
+  name          String     @unique // Fall 2026
+  active        Boolean    @default(false)
+  phase         String     @default("REGISTRATION") // REGISTRATION | ADD_DROP | CLOSED
+  addDropEnds   DateTime? // when phase is ADD_DROP, it auto-closes after this instant
+  offerings     Offering[]
+  registrations Registration[]
+}
+
+model Offering {
+  id         Int      @id @default(autoincrement())
+  semesterId Int
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  sheet      String
+  program    String?
+  courseCode String
+  courseName String
+  section    String?
+  cbaCode    String?
+  preMedOnly Boolean  @default(false)
+  issues     String   @default("[]") // JSON string[]
+  active     Boolean  @default(true)
+}
+
+model Student {
+  id             Int        @id @default(autoincrement())
+  registrationId String     @unique
+  name           String
+  fatherName     String?
+  program        String
+  admission      String?
+  homeSection    String?
+  standing       String     @default("NORMAL")
+  posId          Int?
+  pos            Pos?       @relation(fields: [posId], references: [id])
+  advisorId      Int?
+  advisor        User?      @relation(fields: [advisorId], references: [id])
+  createdAt      DateTime   @default(now())
+  snapshots      Snapshot[]
+  registrations  Registration[]
+  email          String
+}
+
+/// One per (transcript, fulfillment) pair uploaded. Latest verified = active.
+model Snapshot {
+  id           Int      @id @default(autoincrement())
+  studentId    Int
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  verifiedById Int?
+  active       Boolean  @default(true)
+  cgpa         Float?
+  completedCH  Int
+  requiredCH   Int?
+  homeSection  String?
+  courses      String // JSON TranscriptCourse[]
+  terms        String // JSON TranscriptTerm[]
+  warnings     String   @default("[]")
+  transcriptFile String?
+  fulfillmentFile String?
+}
+
+model Registration {
+  id         Int      @id @default(autoincrement())
+  studentId  Int
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  semesterId Int
+  semester   Semester @relation(fields: [semesterId], references: [id])
+  status     String   @default("DRAFT") // DRAFT | APPROVED | FINALIZED | EXPORTED
+  version    Int      @default(0)
+  removals   String   @default("[]") // JSON [{code,title,reason}] recommended courses the advisor dropped
+  updatedAt  DateTime @updatedAt
+  items      RegistrationItem[]
+  versions   RegistrationVersion[]
+
+  @@unique([studentId, semesterId])
+}
+
+model RegistrationItem {
+  id             Int          @id @default(autoincrement())
+  registrationId Int
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  posCourseCode  String?
+  offeringId     Int
+  recommended    Boolean      @default(false) // matches engine suggestion
+  reason         String? // recommendation reason
+  overrideReason String?
+}
+
+model RegistrationVersion {
+  id             Int          @id @default(autoincrement())
+  registrationId Int
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  version        Int
+  items          String // JSON snapshot of final course set
+  changes        String // JSON diff vs previous version
+  reason         String?
+  phase          String       @default("REGISTRATION") // phase in force when this version was committed
+  userId         Int
+  createdAt      DateTime     @default(now())
+  notification   String       @default("NOT_QUEUED") // placeholder for Phase 5 email
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  at        DateTime @default(now())
+  userId    Int?
+  action    String
+  studentRegId String?
+  before    String?
+  after     String?
+  reason    String?
+}

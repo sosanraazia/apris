@@ -1,0 +1,10 @@
+[Unit]
+Description=Check GitHub for a new APRIS release every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+Unit=apris-deploy.service
+
+[Install]
+WantedBy=timers.target

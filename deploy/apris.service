@@ -1,0 +1,30 @@
+[Unit]
+Description=APRIS — Academic Progression & Registration Intelligence System
+After=network.target
+
+[Service]
+Type=simple
+User=apris
+Group=apris
+WorkingDirectory=/opt/apris/current
+EnvironmentFile=/etc/apris/apris.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictNamespaces=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
