@@ -59,7 +59,7 @@ Afterwards:
 
 ## Protect the deploy branch
 
-In GitHub → Settings → Branches, require a pull request and the CI check on `clean-main`. Whatever lands on it goes live on the VM automatically, so `main` should only receive reviewed, green changes.
+In GitHub → Settings → Branches, require a pull request and the CI check on `clean-main`. Whatever lands on it goes live on the VM automatically, so `clean-main` should only receive reviewed, green changes.
 
 ## Security notes
 
