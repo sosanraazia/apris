@@ -21,7 +21,7 @@ export async function semesterReadiness(): Promise<Readiness> {
   const [offeringCount, rowsNeedingFixes, students] = await Promise.all([
     db.offering.count({ where: { semesterId: sem.id, active: true } }),
     db.offering.count({ where: { semesterId: sem.id, active: true, OR: [{ cbaCode: null }, { section: null }] } }),
-    db.student.findMany({ include: { snapshots: { where: { active: true }, take: 1 } } }),
+    db.student.findMany({ where: { archivedAt: null }, include: { snapshots: { where: { active: true }, take: 1 } } }),
   ]);
   const current = students.filter((s) => !sem.openedAt || (s.snapshots[0] && s.snapshots[0].createdAt >= sem.openedAt)).length;
   return { semester: { id: sem.id, name: sem.name, phase: sem.phase }, offeringCount, rowsNeedingFixes, students: students.length, profilesCurrent: current, ready: offeringCount > 0 };

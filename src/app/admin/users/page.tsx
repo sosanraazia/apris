@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { Badge, Card, btnGhost, td, th } from "@/components/ui";
 import { CreateUserForm, ResetPasswordForm } from "@/components/UserForms";
-import { toggleUserAction } from "./actions";
+import { changeRoleAction, toggleUserAction } from "./actions";
+import { input } from "@/components/ui";
 
 export default async function Users() {
   const me = await requireRole("ADMIN");
@@ -18,7 +19,7 @@ export default async function Users() {
             <tbody className="divide-y divide-slate-100">{users.map((u) => (
               <tr key={u.id}>
                 <td className={`${td} font-mono`}>{u.username}</td><td className={td}>{u.name}<div className="text-xs text-slate-500">{u.email}</div></td>
-                <td className={td}><Badge tone={u.role === "ADMIN" ? "violet" : u.role === "HOD" ? "blue" : "slate"}>{u.role.toLowerCase()}</Badge></td>
+                <td className={td}>{u.id === me.userId ? <Badge tone="violet">{u.role.toLowerCase()} (you)</Badge> : <form action={changeRoleAction} className="flex items-center gap-2"><input type="hidden" name="id" value={u.id} /><select name="role" defaultValue={u.role} className={`${input} w-40`} aria-label={`Role for ${u.username}`}><option value="ADVISOR">Advisor</option><option value="HOD">HoD</option><option value="ADMIN">Admin</option></select><button className={btnGhost}>Set</button></form>}</td>
                 <td className={td}>{u._count.students}</td>
                 <td className={td}><Badge tone={u.active ? "green" : "red"}>{u.active ? "active" : "disabled"}</Badge></td>
                 <td className={td}><ResetPasswordForm id={u.id} /></td>

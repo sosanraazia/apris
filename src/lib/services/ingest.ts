@@ -72,6 +72,7 @@ export async function createDraft(opts: { createdBy: number; transcript: Buffer;
   let existingStudentId = opts.existingStudentId ?? null;
   const existing = await db.student.findUnique({ where: { registrationId: transcript.registrationId } });
   if (opts.existingStudentId && existing?.id !== opts.existingStudentId) conflicts.push(`Documents belong to ${transcript.registrationId}, not the selected student`);
+  if (existing?.archivedAt) conflicts.push(`Student ${existing.registrationId} is archived — an Admin must restore the profile first`);
   if (!opts.existingStudentId && existing) {
     existingStudentId = existing.id;
     warnings.push(`Student ${existing.registrationId} already exists — this upload will create a new academic snapshot.`);

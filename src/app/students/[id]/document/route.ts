@@ -3,6 +3,7 @@ import path from "node:path";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { STORAGE_ROOT } from "@/lib/services/ingest";
+import { audit } from "@/lib/services/audit";
 
 export async function GET(req: Request, ctx: RouteContext<"/students/[id]/document">) {
   const s = await getSession();
@@ -17,5 +18,6 @@ export async function GET(req: Request, ctx: RouteContext<"/students/[id]/docume
   const root = STORAGE_ROOT;
   const abs = path.resolve(root, rel);
   if (!abs.startsWith(root + path.sep)) return new Response("Forbidden", { status: 403 });
+  await audit({ userId: s.userId, action: "DOCUMENT_VIEWED", studentRegId: snap.student.registrationId, reason: `${url.searchParams.get("type")} (snapshot #${snap.id})` });
   return new Response(await readFile(abs), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${snap.student.registrationId}-${url.searchParams.get("type")}.pdf"`, "Cache-Control": "private, no-store" } });
 }

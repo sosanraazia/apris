@@ -9,7 +9,7 @@ export default async function Exceptions() {
   const settings = await getSettings();
   const sem = await db.semester.findFirst({ where: { active: true } });
   const [students, overrides, offeringIssues] = await Promise.all([
-    db.student.findMany({ include: { snapshots: { where: { active: true }, take: 1 } } }),
+    db.student.findMany({ where: { archivedAt: null }, include: { snapshots: { where: { active: true }, take: 1 } } }),
     db.registrationItem.findMany({ where: { overrideReason: { not: null }, registration: { semesterId: sem?.id ?? -1 } }, include: { registration: { include: { student: true } } } }),
     db.offering.count({ where: { semesterId: sem?.id ?? -1, OR: [{ cbaCode: null }, { section: null }] } }),
   ]);

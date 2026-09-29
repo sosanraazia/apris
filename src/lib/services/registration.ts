@@ -17,6 +17,8 @@ export class RegistrationError extends Error {}
 export async function assertStudentAccess(session: Session, studentId: number) {
   const st = await db.student.findUnique({ where: { id: studentId } });
   if (!st) throw new RegistrationError("Student not found");
+  if (st.archivedAt && session.role !== "ADMIN") throw new RegistrationError("Student not found");
+  if (st.archivedAt) throw new RegistrationError("This student is archived — restore the profile before changing anything");
   if (session.role === "ADVISOR" && st.advisorId !== session.userId) throw new RegistrationError("Not your advisee");
   return st;
 }
@@ -95,6 +97,8 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
     if (to && to.section !== lo.section) warnings.push(`${lo.courseName}: theory is in ${to.section} but lab is in ${lo.section}.`);
   }
 
+  const labels = new Map((await db.offering.findMany({ where: { semesterId: semester.id } })).map((o) => [o.id, `${o.courseCode} ${o.courseName} [${o.section ?? "no section"} · CBA ${o.cbaCode ?? "—"}]`]));
+  const label = (i: { offeringId: number }) => labels.get(i.offeringId) ?? `offering #${i.offeringId}`;
   const reg = await db.registration.upsert({
     where: { studentId_semesterId: { studentId, semesterId: semester.id } },
     create: { studentId, semesterId: semester.id },
@@ -112,8 +116,8 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
     userId: session.userId,
     action: "REGISTRATION_DRAFT_SAVED",
     studentRegId: st.registrationId,
-    before: before.map((b) => b.offeringId),
-    after: resolved.map((r) => r.offeringId),
+    before: before.map(label),
+    after: resolved.map((r) => label({ offeringId: r.offeringId })),
     reason: [...resolved.filter((r) => r.override).map((r) => `${r.code}: ${r.override}`), ...removals.map((r) => `removed ${r.code}: ${r.reason}`), payload.loadReason].filter(Boolean).join(" | ") || null,
   });
   return { total, count: resolved.length, warnings };
@@ -171,7 +175,7 @@ export async function finalize(session: Session, studentId: number, changeReason
     db.registrationVersion.create({ data: { registrationId: reg.id, version, items: JSON.stringify(finalItems), changes: JSON.stringify(changes), reason: changeReason?.trim() || "Initial registration", phase: perm.late ? "LATE_ADMIN_CHANGE" : phase, userId: session.userId, notification: "DEFERRED" } }),
     db.registration.update({ where: { id: reg.id }, data: { status: "FINALIZED", version } }),
   ]);
-  await audit({ userId: session.userId, action: perm.late ? "REGISTRATION_LATE_CHANGE" : phase === "ADD_DROP" ? "REGISTRATION_ADD_DROP" : "REGISTRATION_FINALIZED", studentRegId: st.registrationId, before: prev.map((p) => p.courseCode), after: finalItems.map((i) => i.courseCode), reason: changeReason ?? `version ${version}` });
+  await audit({ userId: session.userId, action: perm.late ? "REGISTRATION_LATE_CHANGE" : phase === "ADD_DROP" ? "REGISTRATION_ADD_DROP" : "REGISTRATION_FINALIZED", studentRegId: st.registrationId, before: prev.map((p) => `${p.courseCode} ${p.section} (CBA ${p.cbaCode})`), after: finalItems.map((i) => `${i.courseCode} ${i.section} (CBA ${i.cbaCode})`), reason: changeReason ?? `version ${version}` });
   return { version, changes };
 }
 

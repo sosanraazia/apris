@@ -1,7 +1,7 @@
 "use server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { authenticate, createSession, destroySession } from "@/lib/auth";
+import { authenticate, createSession, destroySession, getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/services/audit";
 import { clearFailures, isLocked, recordFailure } from "@/lib/throttle";
@@ -28,6 +28,8 @@ export async function loginAction(_: { error?: string } | undefined, form: FormD
 }
 
 export async function logoutAction() {
+  const s = await getSession();
+  if (s) await audit({ userId: s.userId, action: "LOGOUT" });
   await destroySession();
   redirect("/login");
 }

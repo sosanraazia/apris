@@ -18,7 +18,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const nav = [
     { href: "/", label: "Dashboard" },
     { href: "/students", label: "Students" },
-    ...(s && s.role !== "ADVISOR" ? [{ href: "/exceptions", label: "Exceptions" }] : []),
+    ...(s && s.role !== "ADVISOR" ? [{ href: "/exceptions", label: "Exceptions" }, { href: "/audit", label: "Audit" }] : []),
     ...(s?.role === "ADMIN" ? [{ href: "/admin", label: "Admin" }] : []),
   ];
   return (

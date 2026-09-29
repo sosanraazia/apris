@@ -51,3 +51,16 @@ export async function toggleUserAction(form: FormData) {
   await audit({ userId: s.userId, action: u.active ? "USER_DEACTIVATED" : "USER_ACTIVATED", after: { username: u.username } });
   revalidatePath("/admin/users");
 }
+
+export async function changeRoleAction(form: FormData) {
+  const s = await requireRole("ADMIN");
+  const id = Number(form.get("id"));
+  const role = String(form.get("role"));
+  if (!["ADMIN", "HOD", "ADVISOR"].includes(role) || id === s.userId) return; // can't change your own role
+  const u = await db.user.findUnique({ where: { id } });
+  if (!u || u.role === role) return;
+  if (u.role === "ADMIN" && u.active && (await db.user.count({ where: { role: "ADMIN", active: true } })) <= 1) return; // keep one admin
+  await db.user.update({ where: { id }, data: { role } });
+  await audit({ userId: s.userId, action: "USER_ROLE_CHANGED", before: { username: u.username, role: u.role }, after: { username: u.username, role } });
+  revalidatePath("/admin/users");
+}

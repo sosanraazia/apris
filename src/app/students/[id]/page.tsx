@@ -13,6 +13,8 @@ import { SetHomeSection } from "@/components/SetHomeSection";
 import { EditDetails } from "@/components/EditDetails";
 import { AssignAdvisor } from "@/components/AssignAdvisor";
 import { canEdit, effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
+import { recordStudentView } from "@/lib/services/audit";
+import { ArchiveStudent } from "@/components/ArchiveStudent";
 
 const TABS = [["overview", "Overview"], ["history", "Academic history"], ["pos", "POS progress"], ["registration", "Registration"], ["documents", "Documents"], ["audit", "Audit trail"]] as const;
 const PROG_TONE = { COMPLETED: "green", FAILED: "red", PENDING: "amber", FUTURE: "slate" } as const;
@@ -22,7 +24,8 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
   const id = Number((await params).id);
   const tab = String((await searchParams).tab ?? "overview");
   const st = await db.student.findUnique({ where: { id }, include: { pos: true, advisor: true, snapshots: { orderBy: { id: "desc" } } } });
-  if (!st || (s.role === "ADVISOR" && st.advisorId !== s.userId)) notFound();
+  if (!st || (s.role === "ADVISOR" && st.advisorId !== s.userId) || (st.archivedAt && s.role !== "ADMIN")) notFound();
+  await recordStudentView(s.userId, st.registrationId); // who looked at which student's record
   const ctx = await computeForStudent(id);
   const snap = st.snapshots.find((x) => x.active);
   const courses: TranscriptCourse[] = snap ? JSON.parse(snap.courses) : [];
@@ -43,6 +46,7 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
         </div>
       </div>
 
+      {st.archivedAt && <Notice tone="red"><b>Archived</b> on {st.archivedAt.toLocaleDateString()} — {st.archivedReason}. Hidden from advisors and lists; nothing was deleted.</Notice>}
       <nav className="flex gap-1 border-b border-slate-200">
         {TABS.map(([k, l]) => (<Link key={k} href={`?tab=${k}`} className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === k ? "border-brand font-medium text-brand" : "border-transparent text-slate-500 hover:text-slate-800"}`}>{l}</Link>))}
       </nav>
@@ -59,6 +63,7 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
             <p className="mt-2 text-sm text-slate-600">{ctx.rec.completedCH} of {ctx.settings.fypThresholdCH} required credit hours completed.</p>
           </Card>
           {s.role !== "HOD" && <Card title="Student details"><EditDetails studentId={id} name={st.name} fatherName={st.fatherName} /></Card>}
+          {s.role === "ADMIN" && <Card title="Profile record"><ArchiveStudent studentId={id} archived={!!st.archivedAt} /></Card>}
           {s.role === "ADMIN" && <Card title="Advisor"><AssignAdvisor studentId={id} current={st.advisorId} advisors={(await db.user.findMany({ where: { role: "ADVISOR", active: true }, orderBy: { name: "asc" } })).map((a) => ({ id: a.id, name: a.name }))} /></Card>}
           {s.role !== "HOD" && <Card title="Home section"><SetHomeSection studentId={id} current={st.homeSection} /></Card>}
           {s.role === "ADMIN" && <Card title="Academic standing"><SetStanding studentId={id} current={st.standing} /></Card>}

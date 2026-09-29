@@ -82,3 +82,27 @@ export async function assignAdvisorAction(studentId: number, advisorId: number |
   revalidatePath(`/students/${studentId}`);
   return { ok: "Advisor updated." };
 }
+
+/** Soft delete only. There is deliberately no action anywhere that removes a student row. */
+export async function archiveStudentAction(studentId: number, reason: string): Promise<Result> {
+  const s = await requireRole("ADMIN");
+  if (!reason.trim()) return { error: "A reason is required" };
+  const st = await db.student.findUnique({ where: { id: studentId }, include: { registrations: true } });
+  if (!st) return { error: "Student not found" };
+  if (st.archivedAt) return { error: "Already archived" };
+  if (st.registrations.some((r) => r.version > 0)) return { error: "This student has finalized registrations, so the profile must be kept. Set their standing to Withdrawn / Inactive instead." };
+  await db.student.update({ where: { id: studentId }, data: { archivedAt: new Date(), archivedReason: reason.trim() } });
+  await audit({ userId: s.userId, action: "STUDENT_ARCHIVED", studentRegId: st.registrationId, reason: reason.trim() });
+  revalidatePath("/students");
+  return { ok: "Profile archived. It is hidden from lists and advisors; nothing was deleted." };
+}
+
+export async function restoreStudentAction(studentId: number): Promise<Result> {
+  const s = await requireRole("ADMIN");
+  const st = await db.student.findUnique({ where: { id: studentId } });
+  if (!st?.archivedAt) return { error: "Not archived" };
+  await db.student.update({ where: { id: studentId }, data: { archivedAt: null, archivedReason: null } });
+  await audit({ userId: s.userId, action: "STUDENT_RESTORED", studentRegId: st.registrationId });
+  revalidatePath("/students");
+  return { ok: "Profile restored." };
+}

@@ -100,6 +100,8 @@ model Student {
   advisorId      Int?
   advisor        User?      @relation(fields: [advisorId], references: [id])
   createdAt      DateTime   @default(now())
+  archivedAt     DateTime? // soft delete: only an Admin can archive; records are never removed
+  archivedReason String?
   snapshots      Snapshot[]
   registrations  Registration[]
   email          String
@@ -109,7 +111,7 @@ model Student {
 model Snapshot {
   id           Int      @id @default(autoincrement())
   studentId    Int
-  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   createdAt    DateTime @default(now())
   verifiedById Int?
   active       Boolean  @default(true)
@@ -127,7 +129,7 @@ model Snapshot {
 model Registration {
   id         Int      @id @default(autoincrement())
   studentId  Int
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   semesterId Int
   semester   Semester @relation(fields: [semesterId], references: [id])
   status     String   @default("DRAFT") // DRAFT | APPROVED | FINALIZED | EXPORTED
@@ -174,4 +176,10 @@ model AuditLog {
   before    String?
   after     String?
   reason    String?
+  prevHash  String? // tamper evidence: each row commits to the one before it
+  hash      String?
+
+  @@index([userId])
+  @@index([studentRegId])
+  @@index([action])
 }

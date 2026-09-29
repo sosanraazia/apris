@@ -8,7 +8,7 @@ import { effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const s = await requireRole();
   const sp = await searchParams;
-  const scope = s.role === "ADVISOR" ? { advisorId: s.userId } : {};
+  const scope = s.role === "ADVISOR" ? { advisorId: s.userId, archivedAt: null } : { archivedAt: null };
   const settings = await getSettings();
   const sem = await db.semester.findFirst({ where: { active: true } });
   const students = await db.student.findMany({

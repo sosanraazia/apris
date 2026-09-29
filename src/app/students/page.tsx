@@ -8,10 +8,12 @@ const REG_TONE: Record<string, string> = { NOT_STARTED: "slate", DRAFT: "amber",
 
 export default async function Students({ searchParams }: PageProps<"/students">) {
   const s = await requireRole();
-  const q = String((await searchParams).q ?? "").trim();
+  const sp = await searchParams;
+  const q = String(sp.q ?? "").trim();
+  const showArchived = s.role === "ADMIN" && sp.archived === "1";
   const sem = await db.semester.findFirst({ where: { active: true } });
   const students = await db.student.findMany({
-    where: { ...(s.role === "ADVISOR" ? { advisorId: s.userId } : {}), ...(q ? { OR: [{ registrationId: { contains: q.toUpperCase() } }, { name: { contains: q } }] } : {}) },
+    where: { ...(showArchived ? { archivedAt: { not: null } } : { archivedAt: null }), ...(s.role === "ADVISOR" ? { advisorId: s.userId } : {}), ...(q ? { OR: [{ registrationId: { contains: q.toUpperCase() } }, { name: { contains: q } }] } : {}) },
     include: { pos: true, snapshots: { where: { active: true }, take: 1 }, registrations: { where: { semesterId: sem?.id ?? -1 }, include: { versions: { orderBy: { version: "desc" }, take: 1 } } } },
     orderBy: { registrationId: "asc" },
     take: 200,
@@ -21,6 +23,7 @@ export default async function Students({ searchParams }: PageProps<"/students">)
       <div className="flex items-center justify-between gap-4">
         <div><h1 className="text-xl font-semibold">Students</h1>{sem && <p className="text-xs text-slate-500">{sem.name} · <Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge></p>}</div>
         <form className="ml-auto flex gap-2"><input name="q" defaultValue={q} placeholder="Search Registration ID or name" className={`${input} w-72`} /><button className={btn}>Search</button></form>
+        {s.role === "ADMIN" && <Link href={showArchived ? "/students" : "/students?archived=1"} className={btnGhost}>{showArchived ? "Show active" : "Show archived"}</Link>}
         {s.role !== "HOD" && <Link href="/students/new" className={btn}>+ Add New Student</Link>}
       </div>
       <Card>
