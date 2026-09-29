@@ -28,6 +28,7 @@ Fixed inputs live in `data/`: POS PDFs, `Fall2026CourseOffering.xlsx`, `PreReqRu
 | Installing on the university VM | [deploy/README.md](deploy/README.md) |
 | Security model | [SECURITY.md](SECURITY.md) |
 | Product requirements | [docs/PRD.md](docs/PRD.md) |
+| Project backlog (go-live blockers, next releases, future phases) | [docs/BACKLOG.md](docs/BACKLOG.md) |
 
 Server-side commands (run on the VM, never through the web app): `npm run admin:reset -- <username>` (emergency password reset), `npm run prereq:reload` (reload prerequisite rules from `data/PreReqRules.xlsx`).
 
