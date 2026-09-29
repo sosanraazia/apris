@@ -66,6 +66,7 @@ model Semester {
   active        Boolean    @default(false)
   phase         String     @default("REGISTRATION") // REGISTRATION | ADD_DROP | CLOSED
   addDropEnds   DateTime? // when phase is ADD_DROP, it auto-closes after this instant
+  openedAt      DateTime? // set when an Admin opens the semester in the app (null for the seeded one)
   offerings     Offering[]
   registrations Registration[]
 }

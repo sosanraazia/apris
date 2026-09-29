@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { saveSetting } from "@/lib/settings";
 import { redirect } from "next/navigation";
+import { SemesterError, openSemester } from "@/lib/services/semesters";
 import { audit } from "@/lib/services/audit";
 import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
 import type { Settings } from "@/lib/rules/types";
@@ -94,4 +95,16 @@ export async function applyOfferingsAction(_: { error?: string } | undefined, fo
   }
   revalidatePath("/admin");
   redirect("/admin?offerings=applied");
+}
+
+export async function openSemesterAction(_: { ok?: string; error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  try {
+    const sem = await openSemester(s, String(form.get("name") ?? ""), { force: form.get("force") === "on" });
+    revalidatePath("/", "layout");
+    return { ok: `${sem.name} is open. Upload its course offerings to start suggestions.` };
+  } catch (e) {
+    if (e instanceof SemesterError) return { error: e.message };
+    throw e;
+  }
 }

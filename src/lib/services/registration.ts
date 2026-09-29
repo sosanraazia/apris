@@ -34,6 +34,7 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
   const ctx = await computeForStudent(studentId);
   if (!ctx || !ctx.semester) throw new RegistrationError("No active semester or student profile is incomplete");
   const { rec, settings, semester } = ctx;
+  if (!ctx.offerings.length) throw new RegistrationError(`${semester.name} has no course offerings yet — an Admin must upload them first.`);
   const phase = effectivePhase(semester);
   if (!canEdit(session.role, phase).allowed) throw new RegistrationError("Registration for this semester is closed. Ask an Admin to reopen the add/drop window.");
 

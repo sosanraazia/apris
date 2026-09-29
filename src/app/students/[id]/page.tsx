@@ -119,6 +119,14 @@ async function AuditTab({ regId }: { regId: string }) {
 
 async function RegistrationTab({ studentId, role, ctx }: { studentId: number; role: string; ctx: NonNullable<Awaited<ReturnType<typeof computeForStudent>>> }) {
   if (!ctx.semester) return <Notice tone="red">No active semester is configured.</Notice>;
+  if (!ctx.offerings.length)
+    return (
+      <Notice tone="amber">
+        <p className="font-semibold">{ctx.semester.name} isn&apos;t open for registration yet.</p>
+        <p className="mt-1">Course offerings haven&apos;t been uploaded, so there is nothing to suggest. {role === "ADMIN" ? <>Upload the workbook in <Link className="underline" href="/admin">Admin</Link>.</> : "An Admin needs to upload this semester's course offering workbook — suggestions start as soon as it is applied."}</p>
+      </Notice>
+    );
+  const stale = !!ctx.semester.openedAt && !(await db.snapshot.findFirst({ where: { studentId, active: true, createdAt: { gte: ctx.semester.openedAt } } }));
   const phase = effectivePhase(ctx.semester);
   const perm = canEdit(role as "ADMIN" | "HOD" | "ADVISOR", phase);
   const reg = await db.registration.findUnique({ where: { studentId_semesterId: { studentId, semesterId: ctx.semester.id } }, include: { items: true, versions: { orderBy: { version: "desc" } } } });
@@ -128,6 +136,7 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
   const allOfferings = ctx.offerings.map((o) => ({ id: o.dbId, courseCode: o.courseCode, courseName: o.courseName, section: o.section, cbaCode: o.cbaCode, ch: chMap.get(courseKey(o.courseCode, o.courseName)) ?? (/L$/.test(o.courseCode) ? 1 : 3) }));
   return (
     <div className="space-y-4">
+      {stale && <Notice tone="amber"><b>Documents are from before {ctx.semester.name} opened.</b> Upload the latest Interim Transcript and POS Fulfillment Report (Overview → Update profile) and confirm the home section, so the suggestions use current results.</Notice>}
       <RegistrationEditor
         studentId={studentId}
         readOnly={!perm.allowed}

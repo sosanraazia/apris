@@ -7,12 +7,14 @@ import { SettingsForm } from "@/components/SettingsForm";
 import { fixOfferingAction } from "./actions";
 import { PhaseForm } from "@/components/PhaseForm";
 import { OfferingUploadForm } from "@/components/OfferingForms";
+import { semesterReadiness } from "@/lib/services/semesters";
 import { effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 
 export default async function Admin({ searchParams }: PageProps<"/admin">) {
   await requireRole("ADMIN");
   const applied = (await searchParams).offerings === "applied";
   const settings = await getSettings();
+  const ready = await semesterReadiness();
   const sem = await db.semester.findFirst({ where: { active: true } });
   const offerings = await db.offering.findMany({ where: { semesterId: sem?.id ?? -1 }, orderBy: [{ sheet: "asc" }, { courseCode: "asc" }, { section: "asc" }] });
   const bad = offerings.filter((o) => !o.cbaCode || !o.section || JSON.parse(o.issues).some((i: string) => i.startsWith("Duplicate")));
@@ -41,7 +43,17 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><Link href="/admin/users" className={btnGhost}>Manage users</Link></div>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><div className="flex gap-2"><Link href="/admin/semesters" className={btnGhost}>Semesters</Link><Link href="/admin/users" className={btnGhost}>Manage users</Link></div></div>
+      {ready.semester && (
+        <Card title={`${ready.semester.name} — readiness`} right={<Badge tone={ready.ready ? "green" : "amber"}>{ready.ready ? "suggestions live" : "waiting for offerings"}</Badge>}>
+          <ol className="space-y-2 text-sm">
+            <li>✅ Semester open</li>
+            <li>{ready.ready ? "✅" : "⬜"} Course offerings uploaded — {ready.offeringCount ? `${ready.offeringCount} rows` : "none yet (use “Re-upload course offerings” below)"}{ready.rowsNeedingFixes > 0 && <span className="text-amber-700"> · {ready.rowsNeedingFixes} rows still need a CBA code or section</span>}</li>
+            <li>{ready.students && ready.profilesCurrent === ready.students ? "✅" : "⬜"} Student documents refreshed — {ready.profilesCurrent} of {ready.students} students</li>
+          </ol>
+          <p className="mt-3 text-xs text-slate-500">Advisors get suggestions as soon as offerings are applied; refreshed documents make them accurate.</p>
+        </Card>
+      )}
       {sem && (
         <Card title={`Registration phase — ${sem.name}`} right={<Badge tone={effectivePhase(sem) === "CLOSED" ? "red" : effectivePhase(sem) === "ADD_DROP" ? "amber" : "green"}>{PHASE_LABEL[effectivePhase(sem)]}</Badge>}>
           <PhaseForm phase={sem.phase} ends={sem.addDropEnds ? sem.addDropEnds.toISOString().slice(0, 10) : ""} />
@@ -49,7 +61,7 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
       )}
       <Card title="Academic rule settings"><SettingsForm values={settings} /></Card>
       {applied && <Notice tone="green">Course offerings updated.</Notice>}
-      <Card title={`Re-upload course offerings${sem ? " — " + sem.name : ""}`}><OfferingUploadForm /></Card>
+      <Card title={`Upload course offerings${sem ? " — " + sem.name : ""}`}><OfferingUploadForm /></Card>
       <Card title={`Offering rows needing attention — ${sem?.name ?? ""} (${bad.length})`}>
         <p className="mb-3 text-sm text-slate-600">Rows without a CBA code or section can be recommended but can&apos;t be exported. Enter the values from the source ERP; duplicates are re-checked after each save.</p>
         <div className="-mx-5 overflow-x-auto"><table className="w-full"><thead><tr><th className={th}>Sheet</th><th className={th}>Code</th><th className={th}>Course</th><th className={th} colSpan={3}>Fix</th></tr></thead><tbody className="divide-y divide-slate-100">{bad.map((o) => <Row key={o.id} o={o} />)}{!bad.length && <tr><td className={`${td} py-6 text-center text-emerald-700`} colSpan={6}>All offering rows are export-ready.</td></tr>}</tbody></table></div>

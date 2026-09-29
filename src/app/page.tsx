@@ -19,6 +19,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
   const count = (f: (st: (typeof students)[number]) => boolean) => students.filter(f).length;
   const finalized = count((x) => ["FINALIZED", "EXPORTED"].includes(status(x)));
   const overrides = await db.registrationItem.count({ where: { overrideReason: { not: null }, registration: { student: scope, semesterId: sem?.id ?? -1 } } });
+  const offeringTotal = sem ? await db.offering.count({ where: { semesterId: sem.id, active: true } }) : 0;
   const unknownIssues = await db.offering.count({ where: { semesterId: sem?.id ?? -1, OR: [{ cbaCode: null }, { section: null }] } });
 
   return (
@@ -32,6 +33,7 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
         {s.role !== "HOD" && <Link href="/students/new" className={btn}>+ Add New Student</Link>}
       </div>
 
+      {sem && offeringTotal === 0 && <Notice tone="amber"><b>{sem.name} has no course offerings yet</b> — suggestions start once an Admin uploads them.{s.role === "ADMIN" && <> <Link className="underline" href="/admin">Upload now</Link>.</>}</Notice>}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
         <Stat label={s.role === "ADVISOR" ? "Total advisees" : "Total students"} value={students.length} href="/students" />
         <Stat label="Registration not started" value={count((x) => status(x) === "NOT_STARTED")} />
