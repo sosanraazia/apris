@@ -3,7 +3,9 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { saveSetting } from "@/lib/settings";
+import { redirect } from "next/navigation";
 import { audit } from "@/lib/services/audit";
+import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
 import type { Settings } from "@/lib/rules/types";
 
 const NUMERIC: (keyof Settings)[] = ["fypThresholdCH", "minLoadCH", "regularMaxCH", "overloadMaxCH", "summerMaxCH", "minPassGradePoint"];
@@ -34,19 +36,6 @@ export async function saveSettingsAction(_: { ok?: string; error?: string } | un
   return { ok: "Settings saved." };
 }
 
-/** Recompute duplicate-CBA flags after an edit; keeps other (import-time) notes. */
-async function refreshIssues(semesterId: number) {
-  const rows = await db.offering.findMany({ where: { semesterId } });
-  const byCba = new Map<string, typeof rows>();
-  for (const r of rows) if (r.cbaCode) byCba.set(r.cbaCode, [...(byCba.get(r.cbaCode) ?? []), r]);
-  for (const r of rows) {
-    const keep = (JSON.parse(r.issues) as string[]).filter((i) => !i.startsWith("Duplicate CBA"));
-    const group = r.cbaCode ? byCba.get(r.cbaCode)! : [];
-    if (new Set(group.map((x) => x.courseCode + "|" + x.section)).size > 1) keep.push(`Duplicate CBA ${r.cbaCode} shared by ${group.map((x) => `${x.courseCode}/${x.section}`).join(", ")}`);
-    if (JSON.stringify(keep) !== r.issues) await db.offering.update({ where: { id: r.id }, data: { issues: JSON.stringify(keep) } });
-  }
-}
-
 export async function fixOfferingAction(form: FormData) {
   const s = await requireRole("ADMIN");
   const id = Number(form.get("id"));
@@ -75,4 +64,34 @@ export async function setPhaseAction(_: { ok?: string; error?: string } | undefi
   await audit({ userId: s.userId, action: "SEMESTER_PHASE_CHANGED", before: { phase: sem.phase, ends: sem.addDropEnds }, after: { phase, ends }, reason: sem.name });
   revalidatePath("/", "layout");
   return { ok: `${sem.name} is now in the ${phase.replace("_", " / ").toLowerCase()} phase.` };
+}
+
+export async function uploadOfferingsAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const f = form.get("workbook");
+  if (!(f instanceof File) || !f.size) return { error: "Choose the course offering workbook (.xlsx)." };
+  if (!/\.xlsx$/i.test(f.name)) return { error: "The file must be an .xlsx workbook." };
+  let id: string;
+  try {
+    const draft = await buildOfferingDraft({ createdBy: s.userId, fileName: f.name, buffer: Buffer.from(await f.arrayBuffer()) });
+    id = draft.id;
+    await audit({ userId: s.userId, action: "OFFERINGS_UPLOADED", reason: `${draft.fileName}: +${draft.diff.added.length} ~${draft.diff.updated.length} -${draft.diff.missing.length}` });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/admin/offerings/${id}`);
+}
+
+export async function applyOfferingsAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const draft = await loadOfferingDraft(String(form.get("draftId") ?? ""));
+  if (!draft || draft.createdBy !== s.userId) return { error: "This upload has expired — upload the workbook again." };
+  try {
+    const stats = await applyOfferingDraft(draft, { removeMissing: form.get("removeMissing") === "on" });
+    await audit({ userId: s.userId, action: "OFFERINGS_APPLIED", reason: `${draft.fileName}: ${JSON.stringify(stats)}`, after: draft.diff.registeredChanges.length ? { registeredChanges: draft.diff.registeredChanges } : undefined });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath("/admin");
+  redirect("/admin?offerings=applied");
 }

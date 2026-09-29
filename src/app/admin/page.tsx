@@ -2,14 +2,16 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
-import { Badge, Card, btnGhost, input, td, th } from "@/components/ui";
+import { Badge, Card, Notice, btnGhost, input, td, th } from "@/components/ui";
 import { SettingsForm } from "@/components/SettingsForm";
 import { fixOfferingAction } from "./actions";
 import { PhaseForm } from "@/components/PhaseForm";
+import { OfferingUploadForm } from "@/components/OfferingForms";
 import { effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 
-export default async function Admin() {
+export default async function Admin({ searchParams }: PageProps<"/admin">) {
   await requireRole("ADMIN");
+  const applied = (await searchParams).offerings === "applied";
   const settings = await getSettings();
   const sem = await db.semester.findFirst({ where: { active: true } });
   const offerings = await db.offering.findMany({ where: { semesterId: sem?.id ?? -1 }, orderBy: [{ sheet: "asc" }, { courseCode: "asc" }, { section: "asc" }] });
@@ -46,6 +48,8 @@ export default async function Admin() {
         </Card>
       )}
       <Card title="Academic rule settings"><SettingsForm values={settings} /></Card>
+      {applied && <Notice tone="green">Course offerings updated.</Notice>}
+      <Card title={`Re-upload course offerings${sem ? " — " + sem.name : ""}`}><OfferingUploadForm /></Card>
       <Card title={`Offering rows needing attention — ${sem?.name ?? ""} (${bad.length})`}>
         <p className="mb-3 text-sm text-slate-600">Rows without a CBA code or section can be recommended but can&apos;t be exported. Enter the values from the source ERP; duplicates are re-checked after each save.</p>
         <div className="-mx-5 overflow-x-auto"><table className="w-full"><thead><tr><th className={th}>Sheet</th><th className={th}>Code</th><th className={th}>Course</th><th className={th} colSpan={3}>Fix</th></tr></thead><tbody className="divide-y divide-slate-100">{bad.map((o) => <Row key={o.id} o={o} />)}{!bad.length && <tr><td className={`${td} py-6 text-center text-emerald-700`} colSpan={6}>All offering rows are export-ready.</td></tr>}</tbody></table></div>
