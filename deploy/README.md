@@ -5,7 +5,7 @@ Target address: **https://apris.se.dsu.edu.pk** (change `DOMAIN` if IT picks ano
 ## How updates work
 
 ```
-you push to GitHub `main`
+you push to GitHub `clean-main`
         │            (private repo; the VM only *pulls*, no inbound access needed)
         ▼
 apris-deploy.timer  → every 2 min → /opt/apris/deploy.sh
@@ -47,7 +47,7 @@ Afterwards:
 
 | Task | How |
 |---|---|
-| Release a change | Merge/push to `main`. CI (GitHub Actions) checks it; the VM deploys it within ~2 minutes. |
+| Release a change | Merge/push to `clean-main` (the deploy branch; set by `APRIS_BRANCH` in `/etc/apris/apris.env`). CI (GitHub Actions) checks it; the VM deploys it within ~2 minutes. |
 | See what happened | `tail -f /var/lib/apris/deploy.log`, `journalctl -u apris -f` |
 | Deploy now | `sudo -u apris /opt/apris/deploy.sh` |
 | Which version is live | `basename $(readlink -f /opt/apris/current)` (the git commit) |
@@ -57,9 +57,9 @@ Afterwards:
 | Backups | Nightly 02:30 to `/var/backups/apris` (14 days). **Copy these off the VM.** A DB backup is also taken before every deploy in `/var/lib/apris/backups`. |
 | Restore | `systemctl stop apris; cp /var/backups/apris/apris-<date>.db /var/lib/apris/apris.db; tar -xzf …storage-<date>.tar.gz -C /var/lib/apris; chown -R apris:apris /var/lib/apris; systemctl start apris` |
 
-## Protect `main`
+## Protect the deploy branch
 
-In GitHub → Settings → Branches, require a pull request and the CI check on `main`. Whatever lands on `main` goes live on the VM automatically, so `main` should only receive reviewed, green changes.
+In GitHub → Settings → Branches, require a pull request and the CI check on `clean-main`. Whatever lands on it goes live on the VM automatically, so `main` should only receive reviewed, green changes.
 
 ## Security notes
 

@@ -7,7 +7,7 @@ set -euo pipefail
 
 DOMAIN="${DOMAIN:-apris.se.dsu.edu.pk}"
 REPO="${REPO:-git@github.com:sosanraazia/apris.git}"
-BRANCH="${APRIS_BRANCH:-main}"
+BRANCH="${APRIS_BRANCH:-clean-main}"
 CERT_EMAIL="${CERT_EMAIL:-}"
 BASE=/opt/apris; DATA=/var/lib/apris
 
@@ -39,6 +39,7 @@ NODE_ENV=production
 HOST=127.0.0.1
 PORT=3000
 APP_DOMAIN=$DOMAIN
+APRIS_BRANCH=$BRANCH
 SESSION_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 DATABASE_URL=file:$DATA/apris.db
 STORAGE_DIR=$DATA/storage

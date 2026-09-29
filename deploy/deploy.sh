@@ -4,7 +4,8 @@
 # On any failure the previous release keeps running.
 set -euo pipefail
 
-BRANCH="${APRIS_BRANCH:-main}"
+set -a; . /etc/apris/apris.env; set +a   # may define APRIS_BRANCH
+BRANCH="${APRIS_BRANCH:-clean-main}"
 BASE=/opt/apris
 REPO=$BASE/repo.git          # bare mirror of the private GitHub repo
 DATA=/var/lib/apris
@@ -16,8 +17,6 @@ umask 027
 mkdir -p "$BASE/releases" "$DATA/backups"
 exec 9>"$LOCK"; flock -n 9 || { echo "deploy already running"; exit 0; }
 log() { echo "$(date -Is) $*" | tee -a "$LOG"; }
-
-set -a; . /etc/apris/apris.env; set +a
 
 git --git-dir="$REPO" fetch --quiet origin "+refs/heads/$BRANCH:refs/heads/$BRANCH"
 NEW=$(git --git-dir="$REPO" rev-parse "$BRANCH")
