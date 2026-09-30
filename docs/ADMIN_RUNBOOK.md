@@ -27,7 +27,8 @@ For the department's APRIS administrators (and the IT person supporting the serv
 
 **Admin → Manage users**
 
-- **Add a user:** username, full name, role, institutional email (optional), temporary password (12+ characters, not containing the username). The user **must change it at first login**. Give it to them in person or by phone — not with the link in the same message.
+- **Add a user:** username, full name, role, **university email** (`@dsu.edu.pk`; **required for advisors**), temporary password (12+ characters, not containing the username). An advisor's email matters: **it is where students' replies to registration emails are delivered** (see A11), so use their real, monitored mailbox.
+- **Change an email:** edit it in the *Email* column of the users table and press *Save* (audited). It applies to registrations committed from then on; emails already sent keep their original reply address. The user **must change it at first login**. Give it to them in person or by phone — not with the link in the same message.
 - **Change a role:** the *Set* button next to their role. Takes effect on their next click. You can't change your own role, and one active Admin must always remain. Changing an advisor to another role does **not** reassign their students — reassign first.
 - **Reset a password:** enter a new temporary password → *Reset*. The user is signed out everywhere and must change it.
 - **Disable / enable:** disabled users are locked out immediately. Do this the same day someone leaves.
@@ -143,6 +144,8 @@ There is no automatic recommendation. The advisor picks the courses and records 
 Every time a registration is **finalized** or **changed** (add/drop), APRIS emails the student at `<RegistrationID>@dsu.edu.pk`: their name and ID, semester, date and time, what was added / removed / moved, their current courses with sections and CBA codes, total credit hours and status. Advisors send nothing by hand.
 
 **How it works.** The email is saved in the queue in the same step that saves the registration version; a background worker then sends it (usually within seconds). Because they are separate, **a mail problem can never undo or block a registration**, and a repeated action can't send duplicates. Failed sends are retried automatically (after 1 min, 5 min, 15 min, 1 h, 6 h); after 5 attempts a message is marked **failed** and waits for you.
+
+**Who sends, and who answers replies.** Mail is *sent from* one shared system address (`EMAIL_FROM`, e.g. `DSU Registration <no-reply@dsu.edu.pk>` — arranged with IT). The **Reply-To** is the **advisor who committed that registration** (if an Admin commits it, the student's assigned advisor). The email names that advisor and tells the student to reply to the message. **That advisor is responsible for handling the reply.** The address is copied onto each message when it is queued, so changing an advisor's email later does not alter mail already queued or sent. If there is no advisor address, `EMAIL_DEFAULT_REPLY_TO` (optional) is used; if that is unset too, the email says "please do not reply". During the pilot (`EMAIL_REDIRECT_TO`), no advisor Reply-To is set. Make sure every advisor's email is filled in and monitored.
 
 **Admin → Emails** shows the delivery settings, counters (queued / retrying / sent / failed), the outbox with a preview of each message, **Retry now** / **Retry all failed**, and a **Send test email** box.
 

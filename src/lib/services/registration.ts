@@ -6,6 +6,7 @@ import { audit } from "./audit";
 import { canEdit, effectivePhase } from "./phase";
 import { enqueueEnrollmentEmail } from "../mail/queue";
 import { kickMailWorker } from "../mail/worker";
+import { mailConfig } from "../mail/transport";
 import { computeForStudent } from "./recommendation";
 
 export interface DraftPayload {
@@ -181,6 +182,11 @@ export async function finalize(session: Session, studentId: number, changeReason
   if (isChange && !changes.added.length && !changes.removed.length && !changes.sectionChanged.length) throw new RegistrationError("No changes since the last finalized version");
   if (isChange && !changeReason?.trim()) throw new RegistrationError("A reason is required for changes to a finalized registration");
 
+  // Who handles the student's replies: the advisor who commits this registration; if an Admin commits it, the student's assigned advisor.
+  const committer = await db.user.findUnique({ where: { id: session.userId } });
+  const assigned = st.advisorId ? await db.user.findUnique({ where: { id: st.advisorId } }) : null;
+  const responsible = committer?.role === "ADVISOR" ? committer : assigned;
+  const advisor = responsible?.email ? { name: responsible.name, email: responsible.email } : null;
   const version = reg.version + 1;
   const at = new Date();
   // Version, status change and the student's e-mail are committed together; sending happens afterwards, asynchronously,
@@ -188,7 +194,7 @@ export async function finalize(session: Session, studentId: number, changeReason
   await db.$transaction(async (tx) => {
     const v = await tx.registrationVersion.create({ data: { registrationId: reg.id, version, items: JSON.stringify(finalItems), changes: JSON.stringify(changes), reason: changeReason?.trim() || "Initial registration", phase: perm.late ? "LATE_ADMIN_CHANGE" : phase, userId: session.userId, notification: "QUEUED" } });
     await tx.registration.update({ where: { id: reg.id }, data: { status: "FINALIZED", version } });
-    await enqueueEnrollmentEmail(tx, { student: { id: st.id, registrationId: st.registrationId, name: st.name, email: st.email }, semester: { id: sem.id, name: sem.name }, versionId: v.id, version, prevItems: prev, items: finalItems, at });
+    await enqueueEnrollmentEmail(tx, { student: { id: st.id, registrationId: st.registrationId, name: st.name, email: st.email }, semester: { id: sem.id, name: sem.name }, versionId: v.id, version, prevItems: prev, items: finalItems, at, advisor, defaultReplyTo: mailConfig().defaultReplyTo });
   });
   kickMailWorker();
   await audit({ userId: session.userId, action: perm.late ? "REGISTRATION_LATE_CHANGE" : phase === "ADD_DROP" ? "REGISTRATION_ADD_DROP" : "REGISTRATION_FINALIZED", studentRegId: st.registrationId, before: prev.map((p) => `${p.courseCode} ${p.section} (CBA ${p.cbaCode})`), after: finalItems.map((i) => `${i.courseCode} ${i.section} (CBA ${i.cbaCode})`), reason: changeReason ?? `version ${version}` });

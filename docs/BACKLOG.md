@@ -46,6 +46,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | G-11 | Advisor training (30 min) using the guide; agree the manual fallback and escalation contact | HoD | S | All advisors registered one practice student |
 | G-12 | Review the advisor guide and admin runbook against the live screens; correct any drift | Dev | S | Docs match production |
 | G-14 | **SMTP details from IT** (host, port, account allowed to send as no-reply@dsu.edu.pk); set in `/etc/apris/apris.env`; **Admin → Emails → Send test** works; pilot runs with `EMAIL_REDIRECT_TO` set | IT + Dev | S | Test email arrives; redirect removed at go-live |
+| G-15 | **Every advisor has a real, monitored `@dsu.edu.pk` email in Manage users** (student replies are delivered there); advisors know they own the replies; sender address agreed with IT | Admin + IT | S | Every advisor row shows a correct email; a test registration's reply reaches the right advisor |
 | G-13 | Clear pilot data before real use (`reset-fresh`, or archive pilot students) | Dev | S | Live system holds real data only |
 
 **Go-live gate:** G-01…G-14 complete, or each remaining item consciously accepted by the HoD.
@@ -125,13 +126,23 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Phase | Item | Size |
 |---|---|---|
 | 7 | Section capacity, timetable data (days, times, rooms, faculty), clash-free section allocation, seat availability | L |
-| 8 | LDAP / Active Directory / Entra ID sign-in (auth is already provider-shaped: `authProvider`, `externalId`) | L |
+| 8 | **LDAP / Active Directory sign-in — confirmed for a later version** (auth is already provider-shaped: `authProvider`, `externalId`). See the readiness notes below the table. | L |
 | 9 | One-click ERP enrolment (Registration ID + CBA code) with per-course result handling | L |
 | 10 | HoD bulk auto-enrolment with exception-only review; partial-failure retry (`Retry Failed Enrollments`) | L |
 | — | Additional programs beyond SE and CYS (program table, sheet-prefix mapping, POS code patterns) | L |
 | — | Student portal view (read-only) of their own registration | L |
 | — | Self-service password reset by email (email now exists) | S |
 | — | Email delivery/bounce tracking, cancellation notice, Urdu/English templates | M |
+
+**LDAP readiness notes (decided: LDAP comes in a later version — nothing below is built yet)**
+- **Where it plugs in:** one branch in `authenticate()` (`src/lib/auth.ts`) that checks the credentials against the directory and then resolves the *same* `User` row (`authProvider` = `LDAP`/`ACTIVE_DIRECTORY`, `externalId` = directory identifier). Everything after sign-in (sessions, roles, audit, advisor scoping) is unchanged. Business logic does not need rewriting.
+- **Email:** advisors' email (used as Reply-To on student emails) is entered by an Admin today. With LDAP it should be **synced from the directory's `mail` attribute at each sign-in** and become read-only in *Manage users*. Keep the `@dsu.edu.pk` check (`src/lib/userEmail.ts`).
+- **Roles:** map directory groups to Admin / HoD / Advisor (e.g. `apris-admins`, `apris-hod`, `apris-advisors`) so access is removed centrally when someone leaves; decide whether an Admin can still override a role locally.
+- **Passwords:** LDAP users have no local password (`passwordHash` stays empty; the change-password page and "reset password" don't apply to them). Keep **one or two local break-glass Admin accounts** (`authProvider = LOCAL`) in case the directory is unreachable, with the throttle and audit unchanged.
+- **Account matching:** match on the directory's stable id (`externalId`), not on the username, so renames don't create duplicates or hand over an account.
+- **Provisioning:** first LDAP sign-in creates the `User` row only if the person is in an allowed group; students never get accounts.
+- **Needs from IT (ask early):** directory type and server, TLS/LDAPS certificate, a read-only service account, search base, attribute names (`uid`/`sAMAccountName`, `mail`, `displayName`), group names, and network access from the VM.
+- **Tests to add then:** a fake-directory adapter, group→role mapping, disabled-in-directory user is refused, break-glass account still works.
 
 ---
 
@@ -162,6 +173,9 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Advisors never delete students; Admin archives only | 2026-09 | |
 | Deploy from `clean-main`, pull-based, on the university VM (not Vercel) | 2026-09 | |
 | Student emails built after the first release plan (queue + retry + redirect for pilot) | 2026-09 | N-01…N-04 done; delivery tracking (bounces) is a later item |
+| A student's email address is always `<RegistrationID>@dsu.edu.pk` (lowercase, never typed) | 2026-09 | one shared rule, used at creation and by the mail queue |
+| Replies to student emails go to the **advisor who committed the registration**, who is responsible for answering | 2026-09 | Reply-To = that advisor's stored university email; sender is a shared system address (needs IT); advisor email is required when an Admin creates an advisor |
+| **LDAP / Active Directory sign-in will be added in a later version** | 2026-09 | design notes under Phase 8; advisor email will then sync from the directory |
 
 ---
 

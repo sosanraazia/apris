@@ -106,6 +106,8 @@ Approving creates **Version 1** of the registration and puts it in the export fi
 ### What the student receives
 When you finalize (and whenever you later commit an add/drop or change), APRIS emails the student at `<RegistrationID>@dsu.edu.pk`: their courses, sections, CBA codes, total credit hours and — for changes — what was added, removed or moved. You don't send anything yourself. See the **Emails** tab on the student for what was sent and its status. If an email fails the registration is still valid; tell your Admin and they can retry it.
 
+**Replies come to you.** The email is sent from the shared system address, but its **Reply-To is your own university email** (set by your Admin), and the message names you as the student's advisor and invites them to reply. **You are responsible for answering** replies about registrations you committed — check your inbox after each batch, and answer or forward to the right office within a working day. If your email address in APRIS is wrong or missing, tell your Admin, because student replies will not reach you.
+
 ### Probation and relegation students (manual)
 For now these students are registered **manually**. APRIS shows a "Manual registration" notice and suggests nothing automatically. Choose the courses yourself, then enter one **approval reference** (e.g. "HoD decision 12 Oct") before saving. It is recorded against every course and listed for the HoD's review. The 21 CH ceiling still applies.
 

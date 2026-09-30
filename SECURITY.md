@@ -22,6 +22,7 @@
 ## Email
 - SMTP credentials live only in `/etc/apris/apris.env`; they are never stored in the database, shown in the app, written to logs, or included in error messages.
 - Student mail always goes to the institutional address `<RegistrationID>@dsu.edu.pk`; recipients are never taken from user input.
+- **Reply-To** is always a stored staff address (validated as `@dsu.edu.pk`, one address, no line breaks) belonging to the advisor who committed the registration — never text typed into a form at send time. In redirect/test mode no Reply-To is set. Only an Admin can set or change staff email addresses, and each change is audited.
 - Names from uploaded PDFs are HTML-escaped and stripped of line breaks (no HTML or header injection).
 - **A development machine cannot email real students:** outside production, real SMTP is refused unless every message is redirected to `EMAIL_REDIRECT_TO`. `EMAIL_REDIRECT_TO` also lets the pilot run against the real system without notifying students.
 - Mail is queued in the same database transaction as the registration version and sent afterwards; a mail failure never changes a registration. Duplicates are prevented by a unique key (student + semester + version + event).

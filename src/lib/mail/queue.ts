@@ -22,6 +22,10 @@ interface EnqueueArgs {
   prevItems: MailCourse[];
   items: MailCourse[];
   at: Date;
+  /** Advisor responsible for replies (committed the registration, else the student's assigned advisor). */
+  advisor?: { name: string; email: string } | null;
+  /** Fallback Reply-To when there is no advisor (EMAIL_DEFAULT_REPLY_TO). */
+  defaultReplyTo?: string | null;
 }
 
 /**
@@ -29,12 +33,12 @@ interface EnqueueArgs {
  * notification — and a later mail failure can never undo the registration. Idempotent per student+semester+version+event.
  */
 export async function enqueueEnrollmentEmail(tx: Prisma.TransactionClient, a: EnqueueArgs) {
-  const built = buildEnrollmentEmail({ studentName: a.student.name, registrationId: a.student.registrationId, semesterName: a.semester.name, version: a.version, at: a.at, prevItems: a.prevItems, items: a.items });
+  const built = buildEnrollmentEmail({ studentName: a.student.name, registrationId: a.student.registrationId, semesterName: a.semester.name, version: a.version, at: a.at, prevItems: a.prevItems, items: a.items, advisor: a.advisor });
   const idempotencyKey = `${a.student.id}:${a.semester.id}:${a.version}:${built.event}`;
   const existing = await tx.notification.findUnique({ where: { idempotencyKey } });
   if (existing) return existing;
   return tx.notification.create({
-    data: { idempotencyKey, studentId: a.student.id, studentRegId: a.student.registrationId, semesterId: a.semester.id, versionId: a.versionId, eventType: built.event, toEmail: studentEmail(a.student.registrationId), subject: built.subject, textBody: built.text, htmlBody: built.html },
+    data: { idempotencyKey, studentId: a.student.id, studentRegId: a.student.registrationId, semesterId: a.semester.id, versionId: a.versionId, eventType: built.event, toEmail: studentEmail(a.student.registrationId), replyTo: a.advisor?.email ?? a.defaultReplyTo ?? null, subject: built.subject, textBody: built.text, htmlBody: built.html },
   });
 }
 
@@ -61,7 +65,7 @@ export async function processDue(opts: { transport?: MailTransport; cfg?: MailCo
       const attempts = n.attempts + 1;
       try {
         if (cfg.problems.length && cfg.mode === "smtp") throw new Error(cfg.problems[0]);
-        await transport.send({ to: n.toEmail, subject: n.subject, text: n.textBody, html: n.htmlBody });
+        await transport.send({ to: n.toEmail, replyTo: n.replyTo ?? undefined, subject: n.subject, text: n.textBody, html: n.htmlBody });
         await db.notification.update({ where: { id: n.id }, data: { status: "SENT", attempts, sentAt: new Date(), transport: transport.name, lastError: null } });
         await audit({ action: "NOTIFICATION_SENT", studentRegId: n.studentRegId, reason: `${n.eventType} → ${n.toEmail} via ${transport.name}` });
         stats.sent++;

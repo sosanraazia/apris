@@ -197,6 +197,7 @@ model Notification {
   versionId      Int?
   eventType      String // ENROLLMENT_FINALIZED | ENROLLMENT_CHANGED | TEST
   toEmail        String
+  replyTo        String? // the responsible advisor's email, captured when the registration was committed
   subject        String
   textBody       String
   htmlBody       String

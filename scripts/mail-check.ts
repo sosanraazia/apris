@@ -5,7 +5,7 @@ import type { MailConfig, MailMessage, MailTransport } from "../src/lib/mail/tra
 
 const db = new PrismaClient();
 const ok = (c: boolean, m: string) => console.log(c ? "✔" : "✖", m);
-const cfg = (mode: MailConfig["mode"]): MailConfig => ({ mode, from: "x@dsu.edu.pk", redirectTo: null, smtp: null, problems: [] });
+const cfg = (mode: MailConfig["mode"]): MailConfig => ({ mode, from: "x@dsu.edu.pk", redirectTo: null, defaultReplyTo: null, smtp: null, problems: [] });
 const sent: MailMessage[] = [];
 const good: MailTransport = { name: "fake-ok", async send(m) { sent.push(m); } };
 const bad: MailTransport = { name: "fake-down", async send() { throw new Error("connect ECONNREFUSED smtp.dsu.edu.pk:587 password=hunter2"); } };
@@ -17,8 +17,12 @@ const bad: MailTransport = { name: "fake-down", async send() { throw new Error("
   ok(rows.every((n) => n.toEmail === "se251093@dsu.edu.pk"), "addressed to <RegistrationID>@dsu.edu.pk");
   ok(rows[0].idempotencyKey.endsWith(":1:ENROLLMENT_FINALIZED"), `idempotency key ${rows[0].idempotencyKey}`);
 
+  const adv = await db.user.findFirstOrThrow({ where: { role: "ADVISOR" } });
+  ok(rows.every((n) => n.replyTo === adv.email), `Reply-To captured from the advisor who committed the registration (${rows[0].replyTo})`);
+  ok(rows[0].textBody.includes(adv.name) && rows[0].textBody.includes("just reply to this email"), "the email names the advisor and invites a reply");
+
   // idempotency: enqueueing the same version again does nothing
-  const reg = await db.registration.findFirstOrThrow({ include: { versions: { orderBy: { version: "asc" } }, student: true, semester: true } });
+  const reg =await db.registration.findFirstOrThrow({ include: { versions: { orderBy: { version: "asc" } }, student: true, semester: true } });
   const v1 = reg.versions[0];
   await db.$transaction((tx) => enqueueEnrollmentEmail(tx, { student: reg.student, semester: reg.semester, versionId: v1.id, version: 1, prevItems: [], items: JSON.parse(v1.items), at: new Date() }));
   ok((await db.notification.count()) === 2, "re-enqueueing the same version created no duplicate");
@@ -52,7 +56,7 @@ const bad: MailTransport = { name: "fake-down", async send() { throw new Error("
   st = await processDue({ transport: good, cfg: cfg("smtp"), now: new Date(now.getTime() + 5000) });
   n1 = await db.notification.findFirstOrThrow({ orderBy: { id: "asc" } });
   ok(st.sent === 1 && n1.status === "SENT" && n1.transport === "fake-ok" && !!n1.sentAt, "retry succeeds → SENT (transport + time recorded)");
-  ok(sent.length === 1 && sent[0].to === "se251093@dsu.edu.pk" && /confirmed/.test(sent[0].subject), `delivered: "${sent[0].subject}"`);
+  ok(sent.length === 1 && sent[0].to === "se251093@dsu.edu.pk" && sent[0].replyTo === adv.email && /confirmed/.test(sent[0].subject), `delivered: "${sent[0].subject}"`);
   ok((await retryAllFailed(admin.id)) === 1, "retry-all picks up the other failed message");
   st = await processDue({ transport: good, cfg: cfg("smtp"), now: new Date(now.getTime() + 10_000) });
   ok(st.sent === 1 && (await db.notification.count({ where: { status: "SENT" } })) === 2, "both messages are now SENT");

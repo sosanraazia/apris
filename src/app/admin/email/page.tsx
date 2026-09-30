@@ -28,6 +28,7 @@ export default async function EmailPage({ searchParams }: PageProps<"/admin/emai
           <div className="flex justify-between"><dt className="text-slate-500">From</dt><dd>{cfg.from}</dd></div>
           <div className="flex justify-between"><dt className="text-slate-500">SMTP server</dt><dd className="font-mono">{cfg.smtp ? `${cfg.smtp.host}:${cfg.smtp.port}${cfg.smtp.secure ? " (TLS)" : " (STARTTLS)"}` : "—"}</dd></div>
           <div className="flex justify-between"><dt className="text-slate-500">SMTP user</dt><dd className="font-mono">{cfg.smtp?.user ?? "—"}</dd></div>
+          <div className="flex justify-between"><dt className="text-slate-500">Reply-To</dt><dd>the advisor who registered the student{cfg.defaultReplyTo ? `; otherwise ${cfg.defaultReplyTo}` : ""}</dd></div>
           <div className="flex justify-between"><dt className="text-slate-500">Redirect all mail to</dt><dd>{cfg.redirectTo ?? "— (real recipients)"}</dd></div>
         </dl>
         {cfg.problems.map((p) => <div key={p} className="mt-3"><Notice tone={cfg.mode === "log" ? "blue" : "amber"}>{p}</Notice></div>)}
@@ -48,7 +49,7 @@ export default async function EmailPage({ searchParams }: PageProps<"/admin/emai
               <td className={`${td} whitespace-nowrap`}>{r.createdAt.toLocaleString()}</td>
               <td className={`${td} font-mono`}><Link className="text-brand hover:underline" href={`/students/${r.studentId}?tab=notifications`}>{r.studentRegId}</Link></td>
               <td className={td}>{r.eventType.replace("ENROLLMENT_", "").toLowerCase()}<details className="mt-1 text-xs"><summary className="cursor-pointer text-slate-500">preview</summary><pre className="mt-1 max-w-md whitespace-pre-wrap rounded bg-slate-50 p-2 font-sans text-slate-700">{r.subject}{"\n\n"}{r.textBody}</pre></details></td>
-              <td className={td}>{r.toEmail}</td>
+              <td className={td}>{r.toEmail}<div className="mt-1 text-xs text-slate-500">replies → {r.replyTo ?? "the From address (no advisor set)"}</div></td>
               <td className={td}><Badge tone={TONE[r.status]}>{r.status.toLowerCase()}</Badge>{r.lastError && r.status !== "SENT" && <div className="mt-1 max-w-xs break-words text-xs text-rose-700">{r.lastError}</div>}{r.status === "SENT" && <div className="mt-1 text-xs text-slate-500">{r.sentAt?.toLocaleString()} · {r.transport}</div>}{r.status === "RETRYING" && <div className="mt-1 text-xs text-slate-500">next try {r.nextAttemptAt.toLocaleTimeString()}</div>}</td>
               <td className={td}>{r.attempts}</td>
               <td className={td}>{(r.status === "FAILED" || r.status === "RETRYING") && <form action={retryOneAction}><input type="hidden" name="id" value={r.id} /><button className={btnGhost}>Retry now</button></form>}</td>

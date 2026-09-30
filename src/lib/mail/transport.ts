@@ -2,6 +2,8 @@ import nodemailer from "nodemailer";
 
 export interface MailMessage {
   to: string;
+  /** Where the student's reply goes (the responsible advisor). Omitted → replies go to the From address. */
+  replyTo?: string;
   subject: string;
   text: string;
   html: string;
@@ -17,6 +19,8 @@ export interface MailConfig {
   mode: MailMode;
   from: string;
   redirectTo: string | null;
+  /** Used as Reply-To when a message has no responsible advisor (e.g. EMAIL_DEFAULT_REPLY_TO=registration@dsu.edu.pk). */
+  defaultReplyTo: string | null;
   smtp: { host: string; port: number; secure: boolean; user: string | null } | null; // never contains the password
   /** Reasons the configured mode cannot send right now. */
   problems: string[];
@@ -49,14 +53,16 @@ export function mailConfig(env: Env = process.env): MailConfig {
       problems.push("Real SMTP is blocked outside production unless EMAIL_REDIRECT_TO is set (protects real students from test mail).");
   }
   if (mode === "off") problems.push("Email is switched off (EMAIL_MODE=off or SMTP not configured): messages stay queued.");
-  return { mode, from, redirectTo, smtp, problems };
+  const defaultReplyTo = env.EMAIL_DEFAULT_REPLY_TO?.trim().toLowerCase() || null;
+  return { mode, from, redirectTo, defaultReplyTo, smtp, problems };
 }
 
 /** Applies EMAIL_REDIRECT_TO: everything goes to the test address, clearly marked with the original recipient. */
 export function applyRedirect(m: MailMessage, redirectTo: string | null): MailMessage {
   if (!redirectTo) return m;
   const note = `[Redirected test copy — originally for ${m.to}]`;
-  return { to: redirectTo, subject: `[TEST → ${m.to}] ${m.subject}`, text: `${note}\n\n${m.text}`, html: `<p style="color:#b45309"><b>${note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</b></p>${m.html}` };
+  // in redirect (test) mode replies must not reach the real advisor either
+  return { to: redirectTo, replyTo: undefined, subject: `[TEST → ${m.to}] ${m.subject}`, text: `${note}\n\n${m.text}`, html: `<p style="color:#b45309"><b>${note.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</b></p>${m.html}` };
 }
 
 export function createTransport(cfg: MailConfig, env: Env = process.env): MailTransport {
@@ -76,7 +82,7 @@ export function createTransport(cfg: MailConfig, env: Env = process.env): MailTr
       name: cfg.redirectTo ? "redirect-smtp" : "smtp",
       async send(m) {
         const out = applyRedirect(m, cfg.redirectTo);
-        await t.sendMail({ from: cfg.from, to: out.to, subject: out.subject, text: out.text, html: out.html, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" } });
+        await t.sendMail({ from: cfg.from, to: out.to, replyTo: out.replyTo, subject: out.subject, text: out.text, html: out.html, headers: { "Auto-Submitted": "auto-generated", "X-Auto-Response-Suppress": "All" } });
       },
     };
   }

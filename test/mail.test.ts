@@ -45,6 +45,35 @@ describe("enrollment e-mail content", () => {
   });
 });
 
+describe("replies go to the responsible advisor", () => {
+  const base = { studentName: "K", registrationId: "SE251093", semesterName: "Fall 2026", version: 1, at, prevItems: [], items: [dsa] };
+  it("names the advisor and invites a reply when there is one", () => {
+    const m = buildEnrollmentEmail({ ...base, advisor: { name: "Ayesha Malik", email: "ayesha.malik@dsu.edu.pk" } });
+    expect(m.text).toContain("just reply to this email");
+    expect(m.text).toContain("Ayesha Malik (ayesha.malik@dsu.edu.pk)");
+    expect(m.text).not.toContain("do not reply");
+    expect(m.html).toContain("<b>Ayesha Malik</b>");
+  });
+  it("falls back to 'do not reply' wording when no advisor address is known", () => {
+    const m = buildEnrollmentEmail({ ...base, advisor: null });
+    expect(m.text).toContain("please do not reply");
+  });
+  it("escapes the advisor's name in HTML and strips line breaks", () => {
+    const m = buildEnrollmentEmail({ ...base, advisor: { name: "<b>Eve</b>\r\nBcc: x@y.z", email: "eve@dsu.edu.pk" } });
+    expect(m.html).not.toContain("<b>Eve</b>");
+    expect(m.text).not.toMatch(/Eve\s*\r?\nBcc/);
+  });
+  it("a redirected test copy never carries the advisor's Reply-To", () => {
+    const out = applyRedirect({ to: "se251093@dsu.edu.pk", replyTo: "ayesha.malik@dsu.edu.pk", subject: "s", text: "t", html: "<p>t</p>" }, "me@dsu.edu.pk");
+    expect(out.replyTo).toBeUndefined();
+  });
+  it("EMAIL_DEFAULT_REPLY_TO is available as a fallback and never contains the password", () => {
+    const cfg = mailConfig({ NODE_ENV: "production", SMTP_HOST: "h", SMTP_PASS: "topsecret", EMAIL_DEFAULT_REPLY_TO: " Registration@DSU.edu.pk " });
+    expect(cfg.defaultReplyTo).toBe("registration@dsu.edu.pk");
+    expect(JSON.stringify(cfg)).not.toContain("topsecret");
+  });
+});
+
 describe("delivery safety", () => {
   it("development never sends real mail by default", () => {
     expect(mailConfig({ NODE_ENV: "development" }).mode).toBe("log");
