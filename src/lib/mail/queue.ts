@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "../db";
 import { audit } from "../services/audit";
+import { studentEmail } from "../studentEmail";
 import { buildEnrollmentEmail, type MailCourse } from "./template";
 import { createTransport, mailConfig, type MailConfig, type MailTransport } from "./transport";
 
@@ -13,7 +14,8 @@ const STUCK_MS = 5 * 60_000;
 const safeError = (e: unknown) => String((e as Error)?.message ?? e).replace(/(pass(word)?|auth|token)[=:]\s*\S+/gi, "$1=…").slice(0, 300);
 
 interface EnqueueArgs {
-  student: { id: number; registrationId: string; name: string; email: string };
+  /** The recipient is always derived from registrationId (<RegistrationID>@dsu.edu.pk); any stored address is ignored. */
+  student: { id: number; registrationId: string; name: string; email?: string };
   semester: { id: number; name: string };
   versionId: number;
   version: number;
@@ -32,7 +34,7 @@ export async function enqueueEnrollmentEmail(tx: Prisma.TransactionClient, a: En
   const existing = await tx.notification.findUnique({ where: { idempotencyKey } });
   if (existing) return existing;
   return tx.notification.create({
-    data: { idempotencyKey, studentId: a.student.id, studentRegId: a.student.registrationId, semesterId: a.semester.id, versionId: a.versionId, eventType: built.event, toEmail: a.student.email, subject: built.subject, textBody: built.text, htmlBody: built.html },
+    data: { idempotencyKey, studentId: a.student.id, studentRegId: a.student.registrationId, semesterId: a.semester.id, versionId: a.versionId, eventType: built.event, toEmail: studentEmail(a.student.registrationId), subject: built.subject, textBody: built.text, htmlBody: built.html },
   });
 }
 

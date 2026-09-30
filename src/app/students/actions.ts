@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { archiveDraft, createDraft, loadDraft } from "@/lib/services/ingest";
 import { assertStudentAccess } from "@/lib/services/registration";
 import { audit } from "@/lib/services/audit";
+import { studentEmail } from "@/lib/studentEmail";
 
 const SECTION = /^[A-Z]{2,4}-\d[A-Z]$/;
 
@@ -47,11 +48,11 @@ export async function confirmProfileAction(_: { error?: string } | undefined, fo
   // an advisor can't take over or overwrite a student who belongs to someone else
   if (existing && s.role === "ADVISOR" && existing.advisorId !== s.userId && existing.advisorId !== null) return { error: "This student is assigned to another advisor." };
   const files = await archiveDraft(draft, regId);
-  const email = `${regId.toLowerCase()}@dsu.edu.pk`;
+  const email = studentEmail(regId); // <RegistrationID>@dsu.edu.pk — never typed by anyone
   const home = homeRaw || existing?.homeSection || null; // blank → keep the current section, or leave unset for new students
 
   const student = existing
-    ? await db.student.update({ where: { id: existing.id }, data: { name, fatherName: father, homeSection: home, posId: draft.posId, admission: t.admission, ...(existing.advisorId === null && s.role === "ADVISOR" ? { advisorId: s.userId } : {}) } })
+    ? await db.student.update({ where: { id: existing.id }, data: { name, fatherName: father, homeSection: home, posId: draft.posId, admission: t.admission, email, ...(existing.advisorId === null && s.role === "ADVISOR" ? { advisorId: s.userId } : {}) } })
     : await db.student.create({ data: { registrationId: regId, name, fatherName: father, program: t.program, admission: t.admission, homeSection: home, posId: draft.posId, advisorId: s.role === "ADVISOR" ? s.userId : null, email } });
 
   await db.snapshot.updateMany({ where: { studentId: student.id, active: true }, data: { active: false } });
