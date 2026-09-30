@@ -23,7 +23,7 @@ Data never lives in the git checkout: database `/var/lib/apris/apris.db`, upload
 2. DNS record `apris.se.dsu.edu.pk` → the VM's IP.
 3. Firewall: inbound **80** and **443**. Outbound **443** to `github.com` **and SSH (22) to `github.com`** (or use `ssh.github.com:443`), plus `registry.npmjs.org`, `binaries.prisma.sh`, `deb.nodesource.com` and Ubuntu apt mirrors. (Without outbound access to these the VM can't build.)
 4. Confirmation that storing student names / grades / transcripts on this VM is approved, and how the VM disk is backed up off-machine.
-5. Either permission for a Let's Encrypt certificate, or a university-issued TLS certificate.
+6. Either permission for a Let's Encrypt certificate, or a university-issued TLS certificate.
 
 ## First install
 
@@ -38,6 +38,7 @@ sudo DOMAIN=apris.se.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_E
 The script asks for an initial admin password, generates a session secret and a **read-only deploy key**, prints the key and waits while you add it at *GitHub → repo → Settings → Deploy keys* (leave "Allow write access" off). It then builds and starts the app, sets up nginx + HTTPS, and enables the deploy and backup timers.
 
 Afterwards:
+0. Put the SMTP details in `/etc/apris/apris.env` (see `apris.env.example`), `sudo systemctl restart apris`, then **Admin → Emails → Send test**. Use `EMAIL_REDIRECT_TO` during the pilot.
 1. Open https://apris.se.dsu.edu.pk, log in as `admin`.
 2. You will be asked to change the initial password immediately (the installer has already removed it from `/etc/apris/apris.env`).
 3. **Admin → Manage users**: create the advisors and the HoD. Each gets a temporary password and must change it at first login.

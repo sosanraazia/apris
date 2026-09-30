@@ -14,6 +14,9 @@ const D = process.cwd() + "/data/sample/";
   const bad = await createDraft({ createdBy: adv.id, transcript: readFileSync(D + "students-2.pdf"), fulfillment: readFileSync(D + "students.pdf"), enteredRegId: "SE999999", homeSection: "SE-3A" });
   console.log("mismatch conflicts:", bad.conflicts);
 
+  // the database refuses to delete a student who has records (by design) — clear this test student's records first
+  const old = await db.student.findUnique({ where: { registrationId: "SE251093" } });
+  if (old) { await db.notification.deleteMany({ where: { studentId: old.id } }); await db.registration.deleteMany({ where: { studentId: old.id } }); await db.snapshot.deleteMany({ where: { studentId: old.id } }); }
   await db.student.deleteMany({ where: { registrationId: "SE251093" } });
   const st = await db.student.create({ data: { registrationId: "SE251093", name: draft.transcript.name, program: "SE", admission: "Fall 2025", homeSection: "SE-3A", posId: draft.posId, advisorId: adv.id, email: "se251093@dsu.edu.pk" } });
   await db.snapshot.create({ data: { studentId: st.id, cgpa: draft.transcript.cgpa, completedCH: draft.transcript.completedCH!, requiredCH: 137, homeSection: "SE-3A", courses: JSON.stringify(draft.transcript.courses), terms: JSON.stringify(draft.transcript.terms) } });

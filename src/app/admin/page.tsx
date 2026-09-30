@@ -44,7 +44,7 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><div className="flex gap-2"><Link href="/admin/semesters" className={btnGhost}>Semesters</Link><Link href="/admin/pos" className={btnGhost}>Plans of Study</Link><Link href="/admin/users" className={btnGhost}>Manage users</Link></div></div>
+      <div className="flex items-center justify-between"><h1 className="text-xl font-semibold">Admin</h1><div className="flex gap-2"><Link href="/admin/semesters" className={btnGhost}>Semesters</Link><Link href="/admin/pos" className={btnGhost}>Plans of Study</Link><Link href="/admin/email" className={btnGhost}>Emails</Link><Link href="/admin/users" className={btnGhost}>Manage users</Link></div></div>
       {ready.semester && (
         <Card title={`${ready.semester.name} — readiness`} right={<Badge tone={ready.registrationsOpen ? "green" : "amber"}>{ready.registrationsOpen ? "registrations open" : ready.ready ? "suggestions live · registrations not open" : "waiting for offerings"}</Badge>}>
           <ol className="space-y-2 text-sm">

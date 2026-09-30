@@ -62,6 +62,7 @@ Open a student from **Students** (search by Registration ID or name). Tabs:
 - **Academic history** — every term and grade.
 - **POS progress** — each Plan of Study course as completed, failed, pending or future.
 - **Registration** — where you register (next section).
+- **Emails** — the notifications sent to the student and their status.
 - **Documents** — the uploaded PDFs. Opening one is logged.
 - **Audit trail** — everything done to this student's record.
 
@@ -101,6 +102,9 @@ If you forget one, the message tells you exactly which course needs it.
 
 ### Approving (finalizing)
 Approving creates **Version 1** of the registration and puts it in the export file. It is refused if a chosen course's offering is missing its **CBA code or section** — that is a data problem for the Admin, who can fix it; you'll see a red note on that row.
+
+### What the student receives
+When you finalize (and whenever you later commit an add/drop or change), APRIS emails the student at `<RegistrationID>@dsu.edu.pk`: their courses, sections, CBA codes, total credit hours and — for changes — what was added, removed or moved. You don't send anything yourself. See the **Emails** tab on the student for what was sent and its status. If an email fails the registration is still valid; tell your Admin and they can retry it.
 
 ### Probation and relegation students (manual)
 For now these students are registered **manually**. APRIS shows a "Manual registration" notice and suggests nothing automatically. Choose the courses yourself, then enter one **approval reference** (e.g. "HoD decision 12 Oct") before saving. It is recorded against every course and listed for the HoD's review. The 21 CH ceiling still applies.

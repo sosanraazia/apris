@@ -11,6 +11,7 @@ const db = new PrismaClient();
 
   // children first — foreign keys on students are RESTRICT on purpose
   const r = await db.$transaction([
+    db.notification.deleteMany(),
     db.registrationItem.deleteMany(),
     db.registrationVersion.deleteMany(),
     db.registration.deleteMany(),

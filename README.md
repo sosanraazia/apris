@@ -45,13 +45,14 @@ Server-side commands (run on the VM, never through the web app): `npm run admin:
 | Explainable recommendations, elective slots, labs bundled with theory | ✅ |
 | Advisor review: section change, add/remove course, **mandatory reasons**, overload/low-load reasons, draft → finalize | ✅ |
 | Registration versioning + change diff; audit log | ✅ |
+| Student email on every committed registration change (queue with retry, Admin outbox, per-student history; SMTP configured through the environment; safe redirect for the pilot) | ✅ |
 | CSV export (`Student Registration ID, CBA Code, Course Code, Class & Section, Course Name`, one row per enrollment) | ✅ |
 | Admin: settings, fix offering rows (CBA/section), standing per student, audit view | ✅ |
 | Dashboards (basic counters), exception list | ✅ basic |
 
-## Deliberately deferred (per the one-week scope)
+## Not built yet
 
-Student e-mail sending (the version records `email: deferred`), probation/relegation CSV upload (standing is set by Admin per student), timetable/seat capacity, LDAP/SSO (auth is provider-shaped: `User.authProvider`), ERP enrolment, HoD bulk approval, POS upload UI (POS are seeded).
+probation/relegation CSV upload (standing is set by Admin per student), bulk student upload, email bounce/delivery tracking, timetable/seat capacity, LDAP/SSO (auth is provider-shaped: `User.authProvider`), ERP enrolment, HoD bulk approval. See [docs/BACKLOG.md](docs/BACKLOG.md).
 
 ## Decisions confirmed by the department
 

@@ -4,6 +4,8 @@ import { courseKey, theoryKeyOf } from "../rules/keys";
 import type { RecItem } from "../rules/types";
 import { audit } from "./audit";
 import { canEdit, effectivePhase } from "./phase";
+import { enqueueEnrollmentEmail } from "../mail/queue";
+import { kickMailWorker } from "../mail/worker";
 import { computeForStudent } from "./recommendation";
 
 export interface DraftPayload {
@@ -161,7 +163,7 @@ export async function finalize(session: Session, studentId: number, changeReason
     if (!o.cbaCode) problems.push(`${o.courseCode} (${o.section ?? "no section"}): missing CBA code`);
     if (!o.section) problems.push(`${o.courseCode}: missing section`);
     if (issues.some((i) => i.startsWith("Duplicate CBA"))) problems.push(`${o.courseCode} (${o.section}): CBA ${o.cbaCode} is duplicated in the offering sheet`);
-    finalItems.push({ courseCode: o.courseCode, courseName: o.courseName, cbaCode: o.cbaCode ?? "", section: o.section ?? "", ch: chMap.get(courseKey(o.courseCode, o.courseName)) ?? 0 });
+    finalItems.push({ courseCode: o.courseCode, courseName: o.courseName, cbaCode: o.cbaCode ?? "", section: o.section ?? "", ch: chMap.get(courseKey(o.courseCode, o.courseName)) ?? (/L$/.test(o.courseCode) ? 1 : 3) });
   }
   if (problems.length) throw new RegistrationError("Can't finalize — offering data is incomplete. Ask an Admin to fix: " + problems.join("; "));
 
@@ -180,10 +182,15 @@ export async function finalize(session: Session, studentId: number, changeReason
   if (isChange && !changeReason?.trim()) throw new RegistrationError("A reason is required for changes to a finalized registration");
 
   const version = reg.version + 1;
-  await db.$transaction([
-    db.registrationVersion.create({ data: { registrationId: reg.id, version, items: JSON.stringify(finalItems), changes: JSON.stringify(changes), reason: changeReason?.trim() || "Initial registration", phase: perm.late ? "LATE_ADMIN_CHANGE" : phase, userId: session.userId, notification: "DEFERRED" } }),
-    db.registration.update({ where: { id: reg.id }, data: { status: "FINALIZED", version } }),
-  ]);
+  const at = new Date();
+  // Version, status change and the student's e-mail are committed together; sending happens afterwards, asynchronously,
+  // so an e-mail problem can never undo (or block) a registration.
+  await db.$transaction(async (tx) => {
+    const v = await tx.registrationVersion.create({ data: { registrationId: reg.id, version, items: JSON.stringify(finalItems), changes: JSON.stringify(changes), reason: changeReason?.trim() || "Initial registration", phase: perm.late ? "LATE_ADMIN_CHANGE" : phase, userId: session.userId, notification: "QUEUED" } });
+    await tx.registration.update({ where: { id: reg.id }, data: { status: "FINALIZED", version } });
+    await enqueueEnrollmentEmail(tx, { student: { id: st.id, registrationId: st.registrationId, name: st.name, email: st.email }, semester: { id: sem.id, name: sem.name }, versionId: v.id, version, prevItems: prev, items: finalItems, at });
+  });
+  kickMailWorker();
   await audit({ userId: session.userId, action: perm.late ? "REGISTRATION_LATE_CHANGE" : phase === "ADD_DROP" ? "REGISTRATION_ADD_DROP" : "REGISTRATION_FINALIZED", studentRegId: st.registrationId, before: prev.map((p) => `${p.courseCode} ${p.section} (CBA ${p.cbaCode})`), after: finalItems.map((i) => `${i.courseCode} ${i.section} (CBA ${i.cbaCode})`), reason: changeReason ?? `version ${version}` });
   return { version, changes };
 }

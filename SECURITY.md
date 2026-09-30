@@ -19,6 +19,14 @@
 - Every state change is written to the audit log (who, what, which student, before/after, reason). Failed logins are logged without ever recording what was typed for unknown usernames.
 - Backups (`/var/backups/apris`) are mode 700 and hold personal data — copy them to approved storage only. Ask IT for **disk encryption** on the VM.
 
+## Email
+- SMTP credentials live only in `/etc/apris/apris.env`; they are never stored in the database, shown in the app, written to logs, or included in error messages.
+- Student mail always goes to the institutional address `<RegistrationID>@dsu.edu.pk`; recipients are never taken from user input.
+- Names from uploaded PDFs are HTML-escaped and stripped of line breaks (no HTML or header injection).
+- **A development machine cannot email real students:** outside production, real SMTP is refused unless every message is redirected to `EMAIL_REDIRECT_TO`. `EMAIL_REDIRECT_TO` also lets the pilot run against the real system without notifying students.
+- Mail is queued in the same database transaction as the registration version and sent afterwards; a mail failure never changes a registration. Duplicates are prevented by a unique key (student + semester + version + event).
+- The mail contains course, section and credit-hour details — treat it as personal data; use TLS to the mail server (STARTTLS/TLS 1.2+ is required by the app).
+
 ## Web hardening
 `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS, and a CSP restricting framing / forms / base URI / plugins; `X-Powered-By` removed; nginx `server_tokens off`; the app listens on `127.0.0.1` only; UFW allows only SSH/80/443; fail2ban and unattended security updates enabled.
 

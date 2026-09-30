@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.12",
     "next": "16.3.6",
+    "nodemailer": "^10.0.13",
     "pdfjs-dist": "^6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -30,14 +31,15 @@
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^4.1.11",
-    "prisma": "^6.19.3"
+    "vitest": "^4.1.11"
   }
 }

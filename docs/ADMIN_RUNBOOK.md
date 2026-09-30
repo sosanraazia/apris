@@ -137,6 +137,31 @@ There is no automatic recommendation. The advisor picks the courses and records 
 | Weekly | Advisor activity looks proportionate; HoD reviewed manual registrations; backups copied off the VM |
 | Each semester start | Disable accounts of people who left; review who has Admin |
 
+
+## A11. Student emails
+
+Every time a registration is **finalized** or **changed** (add/drop), APRIS emails the student at `<RegistrationID>@dsu.edu.pk`: their name and ID, semester, date and time, what was added / removed / moved, their current courses with sections and CBA codes, total credit hours and status. Advisors send nothing by hand.
+
+**How it works.** The email is saved in the queue in the same step that saves the registration version; a background worker then sends it (usually within seconds). Because they are separate, **a mail problem can never undo or block a registration**, and a repeated action can't send duplicates. Failed sends are retried automatically (after 1 min, 5 min, 15 min, 1 h, 6 h); after 5 attempts a message is marked **failed** and waits for you.
+
+**Admin → Emails** shows the delivery settings, counters (queued / retrying / sent / failed), the outbox with a preview of each message, **Retry now** / **Retry all failed**, and a **Send test email** box.
+
+**Configuration** lives on the server in `/etc/apris/apris.env` (never in the app or database): `EMAIL_MODE`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` (see `deploy/apris.env.example`). After editing: `sudo systemctl restart apris`, then use **Send test email**.
+
+| Mode | Behaviour |
+|---|---|
+| `smtp` | Sends for real. Default in production when `SMTP_HOST` is set. |
+| `log` | Pretends: messages are marked sent, nothing leaves the machine. Default on development machines. |
+| `off` | Messages wait in the queue (default in production until SMTP is configured). |
+
+**Pilot / testing safely.** Set `EMAIL_REDIRECT_TO=you@dsu.edu.pk`: every message goes to that address instead of the student, marked `[TEST → original address]`. Run the whole parallel-run pilot this way, then **remove the line and restart at go-live**. As an extra guard, a non-production machine refuses real SMTP unless this is set.
+
+**Statuses:** *queued* (waiting), *retrying* (failed once or more, will try again — the error is shown), *sent* (accepted by the mail server — APRIS does not track bounces or whether the student read it), *failed* (gave up — fix the cause, then **Retry**).
+
+**Common causes of failures:** wrong SMTP host/port/credentials, the VM blocked from the mail server (firewall), the sender address not allowed by the relay, TLS problems (the app requires TLS 1.2+; port 587 uses STARTTLS, 465 implicit TLS with `SMTP_SECURE=true`). The error text on the outbox row says which.
+
+**Daily during registration:** open *Admin → Emails* and confirm *failed* is 0. **Weekly:** check *retrying* isn't growing.
+
 ---
 
 # Part B — Server operations (IT / sysadmin)
@@ -187,7 +212,7 @@ sudo -u apris bash -c 'cd /opt/apris/current && set -a && . /etc/apris/apris.env
 - **Test a restore once before go-live** (into a scratch folder) and record how long it took.
 
 ## B5. Secrets and certificates
-- `/etc/apris/apris.env` (root:apris, 640) holds `SESSION_SECRET`, `DATABASE_URL`, `STORAGE_DIR`, `APRIS_BRANCH`. Never copy it into a ticket or chat.
+- `/etc/apris/apris.env` (root:apris, 640) holds `SESSION_SECRET`, `DATABASE_URL`, `STORAGE_DIR`, `APRIS_BRANCH` and the email settings including `SMTP_PASS`. Never copy it into a ticket or chat.
 - Rotating `SESSION_SECRET` (`openssl rand -base64 48`, then `sudo systemctl restart apris`) signs **everyone** out — do this after any suspected compromise.
 - Certificates: Let's Encrypt renews itself (`systemctl list-timers | grep certbot`); a university-issued certificate must be renewed by IT before it expires.
 - The GitHub deploy key is **read-only**; if the VM is ever compromised, delete it in GitHub → Settings → Deploy keys.
@@ -253,11 +278,15 @@ Do not edit the database. Have the advisor correct it in **Add/Drop** (or an Adm
 | A student has no suggestions | Standing is Probation/Relegation (manual), or Frozen/Withdrawn/etc. |
 | A course is "Blocked" unexpectedly | Prerequisite rule not met — check the rule file and the student's grade (D passes; F/W/I don't). |
 | Everyone logged out suddenly | `SESSION_SECRET` changed or the service restarted with a different env file. |
+| Emails stuck as "retrying" / "failed" | Read the error on *Admin → Emails*: credentials, firewall to the mail server, sender not allowed, or TLS. Fix, restart if you changed the env file, then **Retry all failed**. Registrations are unaffected. |
+| Emails say "log" and nothing arrives | Mail mode is `log` (no SMTP configured) — set the SMTP variables (A11). |
 | Login page says "Too many failed attempts" | Locked 10 minutes per IP+username; wait, or restart the service to clear. |
 
 ---
 
 # Checklists
+
+**Before the pilot:** SMTP details from IT set in the env file → *Send test email* arrives → `EMAIL_REDIRECT_TO` set so pilot mail goes to a test address. **At go-live:** remove `EMAIL_REDIRECT_TO`, restart, send a test, watch the first real messages in *Admin → Emails*.
 
 **Before opening a semester:** previous semester exported and checked → new semester opened → offerings uploaded and reviewed → offering rows needing fixes = 0 → POS published → students' documents refreshed → readiness card green → Open registrations → announce.
 

@@ -24,7 +24,8 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Row-per-course CSV export | ✅ Done |
 | Deploy from GitHub with rollback, backups, docs, advisor guide, admin runbook | ✅ Written — **never run on a real VM** |
 | Real-student pilot | ⬜ Not started |
-| Student emails, timetable, ERP, LDAP, bulk enrolment | ⬜ Later phases |
+| Student emails (queue, retry, outbox, redirect for pilot) | ✅ Done — needs SMTP details from IT (G-14) |
+| Timetable, ERP, LDAP, bulk enrolment | ⬜ Later phases |
 
 ---
 
@@ -44,9 +45,10 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | G-10 | Create real accounts (Admin ×2, HoD, advisors); every user changes their password | Admin | S | All accounts active, no default/temp passwords left |
 | G-11 | Advisor training (30 min) using the guide; agree the manual fallback and escalation contact | HoD | S | All advisors registered one practice student |
 | G-12 | Review the advisor guide and admin runbook against the live screens; correct any drift | Dev | S | Docs match production |
+| G-14 | **SMTP details from IT** (host, port, account allowed to send as no-reply@dsu.edu.pk); set in `/etc/apris/apris.env`; **Admin → Emails → Send test** works; pilot runs with `EMAIL_REDIRECT_TO` set | IT + Dev | S | Test email arrives; redirect removed at go-live |
 | G-13 | Clear pilot data before real use (`reset-fresh`, or archive pilot students) | Dev | S | Live system holds real data only |
 
-**Go-live gate:** G-01…G-13 complete, or each remaining item consciously accepted by the HoD.
+**Go-live gate:** G-01…G-14 complete, or each remaining item consciously accepted by the HoD.
 
 ---
 
@@ -63,10 +65,10 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 ### Notifications (PRD Phase 5 — locked requirement, deferred for the first release)
 | ID | Story | Owner | Size |
 |---|---|---|---|
-| N-01 | SMTP / DSU mail configuration; send from a no-reply address | IT + Dev | M |
-| N-02 | Email `<RegID>@dsu.edu.pk` on every committed enrollment change (initial, add, drop, section change, cancelled); content per PRD §36 | Dev | M |
-| N-03 | Async queue with states Queued / Sent / Failed / Retrying, retry from Admin, idempotency key (student + semester + version + event); failure never rolls back a registration | Dev | L |
-| N-04 | Notification history on the student page | Dev | S |
+| N-01 | ✅ SMTP / DSU mail configuration; send from a no-reply address (config via environment; needs IT details — G-14) | IT + Dev | M |
+| N-02 | ✅ Email `<RegID>@dsu.edu.pk` on every committed enrollment change (initial, add, drop, section change, cancelled); content per PRD §36 | Dev | M |
+| N-03 | ✅ Async queue with states Queued / Sent / Failed / Retrying, retry from Admin, idempotency key (student + semester + version + event); failure never rolls back a registration | Dev | L |
+| N-04 | ✅ Notification history on the student page (Emails tab) and Admin outbox | Dev | S |
 
 ### Policy / rules that need decisions
 | ID | Item | Owner | Size |
@@ -128,7 +130,8 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | 10 | HoD bulk auto-enrolment with exception-only review; partial-failure retry (`Retry Failed Enrollments`) | L |
 | — | Additional programs beyond SE and CYS (program table, sheet-prefix mapping, POS code patterns) | L |
 | — | Student portal view (read-only) of their own registration | L |
-| — | Self-service password reset by email (needs N-01) | S |
+| — | Self-service password reset by email (email now exists) | S |
+| — | Email delivery/bounce tracking, cancellation notice, Urdu/English templates | M |
 
 ---
 
@@ -141,7 +144,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 5. One "Fall 2026" workbook contains mixed POS-version codes (e.g. `CS-2201` means Networks in POS 2024 but Professional Practices in POS 2020); matching is by title, so course codes in the export come from the workbook.
 6. Login throttle is in memory (resets on restart).
 7. The audit chain detects tampering; it cannot stop someone with root access on the VM from rebuilding it — restrict server access and keep off-VM backups.
-8. Emails, timetable, ERP and SSO are not built.
+8. Timetable, ERP and SSO are not built. Email: no bounce/delivery tracking (only "accepted by the mail server"), English only, no "registration cancelled" message yet (there is no cancel feature).
 
 ---
 
@@ -158,7 +161,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Probation / relegation registered manually for now | 2026-09 | automate later (R-01) |
 | Advisors never delete students; Admin archives only | 2026-09 | |
 | Deploy from `clean-main`, pull-based, on the university VM (not Vercel) | 2026-09 | |
-| Student emails deferred beyond the first release | 2026-09 | N-01…N-04 |
+| Student emails built after the first release plan (queue + retry + redirect for pilot) | 2026-09 | N-01…N-04 done; delivery tracking (bounces) is a later item |
 
 ---
 

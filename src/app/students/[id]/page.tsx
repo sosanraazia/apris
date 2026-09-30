@@ -16,7 +16,7 @@ import { canEdit, effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 import { recordStudentView } from "@/lib/services/audit";
 import { ArchiveStudent } from "@/components/ArchiveStudent";
 
-const TABS = [["overview", "Overview"], ["history", "Academic history"], ["pos", "POS progress"], ["registration", "Registration"], ["documents", "Documents"], ["audit", "Audit trail"]] as const;
+const TABS = [["overview", "Overview"], ["history", "Academic history"], ["pos", "POS progress"], ["registration", "Registration"], ["notifications", "Emails"], ["documents", "Documents"], ["audit", "Audit trail"]] as const;
 const PROG_TONE = { COMPLETED: "green", FAILED: "red", PENDING: "amber", FUTURE: "slate" } as const;
 
 export default async function StudentPage({ params, searchParams }: PageProps<"/students/[id]">) {
@@ -106,8 +106,23 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
         </Card>
       )}
 
+      {tab === "notifications" && <NotificationsTab studentId={id} showErrors={s.role === "ADMIN"} email={st.email} />}
       {tab === "audit" && <AuditTab regId={st.registrationId} />}
     </div>
+  );
+}
+
+const MAIL_TONE: Record<string, string> = { QUEUED: "amber", SENDING: "blue", RETRYING: "amber", SENT: "green", FAILED: "red" };
+async function NotificationsTab({ studentId, showErrors, email }: { studentId: number; showErrors: boolean; email: string }) {
+  const list = await db.notification.findMany({ where: { studentId }, orderBy: { id: "desc" } });
+  return (
+    <Card title={`Emails to ${email}`}>
+      <p className="mb-3 text-sm text-slate-600">Sent automatically whenever a registration is finalized or changed. A failed email never affects the registration.</p>
+      <div className="-mx-5 overflow-x-auto"><table className="w-full"><thead><tr><th className={th}>When</th><th className={th}>Event</th><th className={th}>Status</th><th className={th}>Message</th></tr></thead>
+        <tbody className="divide-y divide-slate-100">{list.map((n) => (<tr key={n.id}><td className={`${td} whitespace-nowrap`}>{n.createdAt.toLocaleString()}</td><td className={td}>{n.eventType.replace("ENROLLMENT_", "").toLowerCase()}</td><td className={td}><Badge tone={MAIL_TONE[n.status]}>{n.status.toLowerCase()}</Badge>{n.status === "SENT" && <span className="ml-2 text-xs text-slate-500">{n.sentAt?.toLocaleString()}</span>}{showErrors && n.lastError && n.status !== "SENT" && <div className="mt-1 max-w-xs break-words text-xs text-rose-700">{n.lastError}</div>}</td>
+          <td className={td}><details className="text-xs"><summary className="cursor-pointer text-slate-500">{n.subject}</summary><pre className="mt-1 max-w-lg whitespace-pre-wrap rounded bg-slate-50 p-2 font-sans text-slate-700">{n.textBody}</pre></details></td></tr>))}
+          {!list.length && <tr><td colSpan={4} className={`${td} py-8 text-center text-slate-500`}>No emails yet.</td></tr>}</tbody></table></div>
+    </Card>
   );
 }
 
@@ -135,6 +150,7 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
   const phase = effectivePhase(ctx.semester);
   const perm = canEdit(role as "ADMIN" | "HOD" | "ADVISOR", phase);
   const reg = await db.registration.findUnique({ where: { studentId_semesterId: { studentId, semesterId: ctx.semester.id } }, include: { items: true, versions: { orderBy: { version: "desc" } } } });
+  const mailStatus = new Map((await db.notification.findMany({ where: { studentId, semesterId: ctx.semester.id }, select: { versionId: true, status: true } })).map((n) => [n.versionId, n.status]));
   const users = new Map((await db.user.findMany()).map((u) => [u.id, u.name]));
   const chRows = await db.posCourse.findMany({ select: { code: true, title: true, ch: true } });
   const chMap = new Map(chRows.map((r) => [courseKey(r.code, r.title), r.ch]));
@@ -167,7 +183,7 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
           <ul className="space-y-3 text-sm">{reg.versions.map((v) => {
             const ch = JSON.parse(v.changes) as { added: string[]; removed: string[]; sectionChanged: { course: string; from: string; to: string }[] };
             const items = JSON.parse(v.items) as { courseCode: string; section: string; courseName: string }[];
-            return (<li key={v.id} className="rounded-md border border-slate-100 p-3"><div className="flex flex-wrap items-center gap-2"><Badge tone="green">v{v.version}</Badge>{v.phase !== "REGISTRATION" && <Badge tone={v.phase === "ADD_DROP" ? "amber" : "red"}>{v.phase.replaceAll("_", " ").toLowerCase()}</Badge>}<span>{v.createdAt.toLocaleString()} by {users.get(v.userId)}</span><span className="text-slate-500">— {v.reason}</span><Badge>email: {v.notification.toLowerCase()}</Badge></div>
+            return (<li key={v.id} className="rounded-md border border-slate-100 p-3"><div className="flex flex-wrap items-center gap-2"><Badge tone="green">v{v.version}</Badge>{v.phase !== "REGISTRATION" && <Badge tone={v.phase === "ADD_DROP" ? "amber" : "red"}>{v.phase.replaceAll("_", " ").toLowerCase()}</Badge>}<span>{v.createdAt.toLocaleString()} by {users.get(v.userId)}</span><span className="text-slate-500">— {v.reason}</span><Badge tone={MAIL_TONE[mailStatus.get(v.id) ?? ""] ?? "slate"}>email: {(mailStatus.get(v.id) ?? v.notification).toLowerCase()}</Badge></div>
               <div className="mt-2 text-xs text-slate-600">{ch.added.length > 0 && <>Added: {ch.added.join(", ")}. </>}{ch.removed.length > 0 && <>Removed: {ch.removed.join(", ")}. </>}{ch.sectionChanged.map((c) => `${c.course}: ${c.from} → ${c.to}. `)}</div>
               <div className="mt-1 text-xs text-slate-500">{items.map((i) => `${i.courseCode} (${i.section})`).join(" · ")}</div></li>);
           })}</ul>

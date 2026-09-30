@@ -102,6 +102,7 @@ model Student {
   createdAt      DateTime   @default(now())
   archivedAt     DateTime? // soft delete: only an Admin can archive; records are never removed
   archivedReason String?
+  notifications  Notification[]
   snapshots      Snapshot[]
   registrations  Registration[]
   email          String
@@ -182,4 +183,31 @@ model AuditLog {
   @@index([userId])
   @@index([studentRegId])
   @@index([action])
+}
+
+/// Outbound e-mail queue. Rows are written in the same transaction as the registration version they describe,
+/// so a committed change always has its notification, and a mail failure can never roll a registration back.
+model Notification {
+  id             Int       @id @default(autoincrement())
+  idempotencyKey String    @unique // studentId:semesterId:version:event — repeated actions can't create duplicates
+  studentId      Int
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  studentRegId   String
+  semesterId     Int
+  versionId      Int?
+  eventType      String // ENROLLMENT_FINALIZED | ENROLLMENT_CHANGED | TEST
+  toEmail        String
+  subject        String
+  textBody       String
+  htmlBody       String
+  status         String    @default("QUEUED") // QUEUED | SENDING | SENT | RETRYING | FAILED
+  attempts       Int       @default(0)
+  lastError      String?
+  nextAttemptAt  DateTime  @default(now())
+  sentAt         DateTime?
+  transport      String? // smtp | log | redirect-smtp
+  createdAt      DateTime  @default(now())
+
+  @@index([status, nextAttemptAt])
+  @@index([studentId])
 }
