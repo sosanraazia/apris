@@ -23,6 +23,7 @@ interface Props {
   manual: boolean;
   standing: string;
   savedApproval: string;
+  homeSection: string | null;
 }
 interface Row { include: boolean; offeringId: string; reason: string }
 
@@ -101,13 +102,39 @@ export function RegistrationEditor(p: Props) {
     setMsg(r.error ? { tone: "red", text: r.error } : { tone: "green", text: r.ok! });
   });
   const approveAll = () => {
-    setRows((r) => { const n = { ...r }; for (const i of includable) if (i.status === "RECOMMENDED" && i.suggested) n[i.key] = { ...n[i.key], include: true, offeringId: i.suggested.offeringId }; return n; });
+    const targets = includable.filter((i) => i.status === "RECOMMENDED" && i.suggested);
+    if (!targets.length) {
+      setMsg({ tone: "red", text: p.homeSection ? "There is nothing to approve automatically — choose a section for each course (or use “Set section for all courses”)." : "Nothing can be approved automatically because this student has no home section. Set the home section (Overview tab), or use “Set section for all courses” below." });
+      return;
+    }
+    setRows((r) => { const n = { ...r }; for (const i of targets) n[i.key] = { ...n[i.key], include: true, offeringId: i.suggested!.offeringId }; return n; });
+    setMsg(null);
+    setDirty(true);
+  };
+
+  // One section for every course (labs stay with their theory course because they share a section).
+  const allSections = [...new Set(includable.flatMap((i) => i.choices.filter((c) => !c.crossProgram && c.section).map((c) => c.section as string)))].sort();
+  const applySectionToAll = (section: string) => {
+    if (!section) return;
+    let applied = 0, skipped = 0;
+    setRows((r) => {
+      const n = { ...r };
+      for (const i of includable) {
+        const match = i.choices.find((c) => c.section === section && !c.crossProgram);
+        if (!match) { if (i.status === "RECOMMENDED") skipped++; continue; }
+        n[i.key] = { ...n[i.key], offeringId: match.offeringId, include: i.status === "RECOMMENDED" ? true : n[i.key].include };
+        if (i.status === "RECOMMENDED") applied++;
+      }
+      return n;
+    });
+    setMsg({ tone: applied ? "green" : "red", text: applied ? `Section ${section} applied to ${applied} course(s)${skipped ? `; ${skipped} recommended course(s) aren't offered in ${section} — choose those by hand` : ""}. Review, then save the draft.` : `No recommended course is offered in ${section}.` });
     setDirty(true);
   };
   const addable = p.offerings.filter((o) => !adhoc.some((a) => a.offeringId === String(o.id)));
 
   return (
     <div className="space-y-4">
+      {!p.homeSection && !p.manual && p.phase !== "SETUP" && <Notice tone="amber"><b>This student has no home section yet</b>, so no section is pre-selected and “Approve all recommended” has nothing to apply. Either set it under <a className="underline" href="?tab=overview">Overview → Home section</a>, or pick one section for all courses with the “Set section for all courses” menu below.</Notice>}
       {p.manual && <Notice tone="amber"><b>Manual registration — {p.standing.toLowerCase()} student.</b> There is no automatic recommendation for this standing yet. Choose the courses below (or add others from the offerings) and enter the approval reference. The whole registration is recorded against it and listed for HoD review.</Notice>}
       {p.phase === "SETUP" && <Notice tone="blue"><b>Registrations aren&apos;t open yet.</b> You can review the suggestions below; saving and finalizing become available when an Admin opens registrations.</Notice>}
       {p.phase === "ADD_DROP" && <Notice tone="blue"><b>Add / Drop phase.</b> Tick a course to <b>add</b> it, untick to <b>drop</b> it, or change its section. Save the draft, then finalize with a reason — this creates a new registration version.</Notice>}
@@ -117,7 +144,13 @@ export function RegistrationEditor(p: Props) {
         <Badge tone={p.status === "FINALIZED" || p.status === "EXPORTED" ? "green" : "amber"}>{p.status.toLowerCase()}{p.version ? ` · v${p.version}` : ""}</Badge>
         <span className={`rounded-md px-2.5 py-1 font-medium tabular-nums ${overload ? "bg-rose-50 text-rose-700" : low ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-700"}`}>{total} CH selected</span>
         <span className="text-slate-500">limit {max} CH · minimum {p.limits.min} CH · absolute max {p.limits.overloadMax} CH</span>
-        {!p.readOnly && !p.manual && <button type="button" onClick={approveAll} className={`${btnGhost} ml-auto`}>Approve all recommended</button>}
+        {!p.readOnly && !p.manual && allSections.length > 0 && (
+          <select className={`${input} ml-auto w-56`} value="" onChange={(e) => applySectionToAll(e.target.value)} aria-label="Set section for all courses">
+            <option value="">Set section for all courses…</option>
+            {allSections.map((sec) => <option key={sec} value={sec}>{sec}</option>)}
+          </select>
+        )}
+        {!p.readOnly && !p.manual && <button type="button" onClick={approveAll} className={btnGhost}>Approve all recommended</button>}
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -130,7 +163,7 @@ export function RegistrationEditor(p: Props) {
               const needsReason = !p.manual && (r.include ? !isStandard(i, r.offeringId) : i.status === "RECOMMENDED");
               return (
                 <tr key={i.key} className={r.include ? "bg-emerald-50/30" : ""}>
-                  <td className={td}><input type="checkbox" aria-label={`Include ${i.title}`} disabled={p.readOnly || !r.offeringId} checked={r.include} onChange={(e) => set(i.key, { include: e.target.checked })} /></td>
+                  <td className={td}><input type="checkbox" aria-label={`Include ${i.title}`} disabled={p.readOnly || !r.offeringId} title={!r.offeringId ? "Choose a section first" : undefined} checked={r.include} onChange={(e) => set(i.key, { include: e.target.checked })} /></td>
                   <td className={td}><div className="font-medium">{i.title}</div><div className="font-mono text-xs text-slate-500">{i.code} · sem {i.semester}{i.isBacklog && " · backlog"}</div></td>
                   <td className={`${td} tabular-nums`}>{i.ch}</td>
                   <td className={td}><Badge tone={STATUS_TONE[i.status]}>{i.status.replaceAll("_", " ").toLowerCase()}</Badge><div className="mt-1 max-w-sm text-xs text-slate-600">{i.reason}</div>{i.sectionNote && <div className="mt-1 max-w-sm text-xs text-amber-700">{i.sectionNote}</div>}</td>
@@ -189,7 +222,8 @@ export function RegistrationEditor(p: Props) {
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
           <div className="flex gap-2">
             <button className={btnGhost} type="button" disabled={pending} onClick={save}>Save draft</button>
-            <button className={btn} type="button" disabled={pending || dirty || !p.saved.length && dirty} onClick={fin} title={dirty ? "Save the draft first" : ""}>{p.version > 0 ? (p.phase === "ADD_DROP" ? "Commit add / drop" : "Commit change") : "Finalize registration"}</button>
+            <button className={btn} type="button" disabled={pending || dirty || !p.saved.length && dirty} onClick={fin} title={dirty ? "Save the draft first" : ""}>{p.version > 0 ? (p.phase === "ADD_DROP" ? "Commit add / drop" : "Commit change") : "Approve & finalize registration"}</button>
+            {dirty && <span className="self-center text-xs text-slate-500">Save the draft first, then approve.</span>}
           </div>
           <p className="text-xs text-slate-500">Finalizing creates a committed registration version and feeds the export CSV. Emails to students are queued for a later phase.</p>
         </div>

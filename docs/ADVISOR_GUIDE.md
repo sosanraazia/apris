@@ -83,12 +83,12 @@ Go to the student's **Registration** tab (or use **Register / Add / Drop** in th
 Courses APRIS **cannot** register appear under **"Not registrable now"** with the reason — for example *prerequisite incomplete*, *FYP-I not eligible (84 of 90 credit hours)*, or *not offered this semester*.
 
 ### Steps
-1. Review the suggestions. Use **Approve all recommended** for a straightforward student, or tick / untick courses yourself.
+1. Review the suggestions. If the student has a home section, **Approve all recommended** ticks everything with a suggested section. If not (or to use another section), pick one from **Set section for all courses…** — it selects that section for every course offered in it — or choose sections row by row. A course's tick box stays greyed out until it has a section.
 2. **Backlog courses** have no automatic section: choose one from the offered sections (it may be another program's section — that is allowed).
 3. **Electives** are slots: choose which offered elective the student takes.
 4. **Labs always follow their theory course.** When you change a theory course's section, its lab moves to the same section automatically, and they tick together. If the lab isn't offered in that section, pick a different section.
 5. Watch the **credit-hour counter**: normal load is up to 18 CH, minimum 12 CH, and never more than 21 CH.
-6. Click **Save draft**, then **Finalize registration**.
+6. Click **Save draft**, then **Approve & finalize registration** (the approve button is enabled once the draft is saved).
 
 ### When a reason is required
 APRIS makes you explain any deviation, so the record shows why:
@@ -99,8 +99,8 @@ APRIS makes you explain any deviation, so the record shows why:
 
 If you forget one, the message tells you exactly which course needs it.
 
-### Finalizing
-Finalizing creates **Version 1** of the registration and puts it in the export file. It is refused if a chosen course's offering is missing its **CBA code or section** — that is a data problem for the Admin, who can fix it; you'll see a red note on that row.
+### Approving (finalizing)
+Approving creates **Version 1** of the registration and puts it in the export file. It is refused if a chosen course's offering is missing its **CBA code or section** — that is a data problem for the Admin, who can fix it; you'll see a red note on that row.
 
 ### Probation and relegation students (manual)
 For now these students are registered **manually**. APRIS shows a "Manual registration" notice and suggests nothing automatically. Choose the courses yourself, then enter one **approval reference** (e.g. "HoD decision 12 Oct") before saving. It is recorded against every course and listed for the HoD's review. The 21 CH ceiling still applies.

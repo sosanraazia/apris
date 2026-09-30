@@ -143,6 +143,8 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
     <div className="space-y-4">
       {stale && <Notice tone="amber"><b>Documents are from before {ctx.semester.name} opened.</b> Upload the latest Interim Transcript and POS Fulfillment Report (Overview → Update profile) and confirm the home section, so the suggestions use current results.</Notice>}
       <RegistrationEditor
+        key={`${ctx.input.homeSection ?? "none"}-${reg?.version ?? 0}`}
+        homeSection={ctx.input.homeSection}
         studentId={studentId}
         readOnly={!perm.allowed}
         phase={phase}
