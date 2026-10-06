@@ -27,13 +27,24 @@ Data never lives in the git checkout: database `/var/lib/apris/apris.db`, upload
 
 ## First install
 
-On the VM:
+The repository is **private**, so the VM cannot clone it over plain HTTPS. The VM authenticates with a **read-only deploy key** (an SSH key that exists only on the VM and can only read this one repo).
 
-```bash
-git clone https://github.com/sosanraazia/apris.git /tmp/apris-src   # or just copy deploy/install.sh onto the VM
-cd /tmp/apris-src/deploy
-sudo DOMAIN=apris.se.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
-```
+1. From your laptop, copy the deploy folder to the VM (the VM needs no GitHub access for this step):
+   ```bash
+   scp -r deploy <your-user>@<vm-address>:/tmp/apris-deploy
+   ```
+2. On the VM, run the installer:
+   ```bash
+   cd /tmp/apris-deploy
+   sudo DOMAIN=apris.se.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
+   ```
+3. When it prints `Add this public key as a READ-ONLY deploy key…` and shows a line starting with `ssh-ed25519`, **copy that whole line** and add it in GitHub (you need to be an admin of the repo):
+   *GitHub → `sosanraazia/apris` → Settings → Deploy keys → Add deploy key* → title `apris-vm`, paste the key, **leave "Allow write access" unticked**, Add key. Then go back to the VM terminal and press Enter. The script checks the key works before it continues.
+4. If you ever need to see the key again: `sudo cat /var/lib/apris/.ssh/id_ed25519.pub` (the private half, `id_ed25519`, never leaves the VM and must never be copied or committed).
+
+**Rotating or revoking the key:** delete it under Settings → Deploy keys (the VM stops being able to pull immediately), then on the VM run `sudo -u apris rm /var/lib/apris/.ssh/id_ed25519*` and re-run `install.sh` to generate and register a new one. Do this if the VM is rebuilt, replaced or suspected of compromise. One deploy key can only be attached to one repository, which is what we want here.
+
+Network: the VM needs outbound SSH (22) to `github.com`, or port 443 via `ssh.github.com` (ask IT; see the firewall list above).
 
 The script asks for an initial admin password, generates a session secret and a **read-only deploy key**, prints the key and waits while you add it at *GitHub → repo → Settings → Deploy keys* (leave "Allow write access" off). It then builds and starts the app, sets up nginx + HTTPS, and enables the deploy and backup timers.
 
