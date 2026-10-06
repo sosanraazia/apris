@@ -233,7 +233,7 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
     if (!choices.length) return { ...base, status: "NOT_OFFERED", reason: `${sl.title} — academically due (semester ${sl.semester}) but not offered this semester.` };
 
     if (sl.isPlaceholder) {
-      return { ...base, status: "ELECTIVE_CHOICE", priority: 4, reason: `${sl.title} — elective slot; choose one of ${new Set(choices.map((c) => c.courseName)).size} offered elective(s).` };
+      return { ...base, status: "ELECTIVE_CHOICE", priority: 4, reason: `${sl.title} — elective slot — offered: ${[...new Set(choices.map((c) => c.courseName))].join(", ")}.` };
     }
     if (opts.ahead) return { ...base, status: "OPTIONAL", priority: 5, reason: `Offered this semester ahead of POS semester ${sl.semester}; optional.` };
 

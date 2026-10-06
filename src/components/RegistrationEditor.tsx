@@ -164,13 +164,13 @@ export function RegistrationEditor(p: Props) {
               return (
                 <tr key={i.key} className={r.include ? "bg-emerald-50/30" : ""}>
                   <td className={td}><input type="checkbox" aria-label={`Include ${i.title}`} disabled={p.readOnly || !r.offeringId} title={!r.offeringId ? "Choose a section first" : undefined} checked={r.include} onChange={(e) => set(i.key, { include: e.target.checked })} /></td>
-                  <td className={td}><div className="font-medium">{i.title}</div><div className="font-mono text-xs text-slate-500">{i.code} · sem {i.semester}{i.isBacklog && " · backlog"}</div></td>
+                  <td className={td}>{(() => { const names = [...new Set(i.choices.map((c) => c.courseName))]; const slot = i.status === "ELECTIVE_CHOICE"; const shown = slot ? (choice?.courseName ?? (names.length === 1 ? names[0] : null)) : null; return shown ? (<><div className="font-medium">{shown}</div><div className="text-xs text-slate-500">{i.title} · <span className="font-mono">{choice?.courseCode ?? i.choices[0]?.courseCode}</span> · sem {i.semester}{i.isBacklog && " · backlog"}</div></>) : (<><div className="font-medium">{i.title}</div><div className="font-mono text-xs text-slate-500">{i.code} · sem {i.semester}{i.isBacklog && " · backlog"}</div></>); })()}</td>
                   <td className={`${td} tabular-nums`}>{i.ch}</td>
                   <td className={td}><Badge tone={STATUS_TONE[i.status]}>{i.status.replaceAll("_", " ").toLowerCase()}</Badge><div className="mt-1 max-w-sm text-xs text-slate-600">{i.reason}</div>{i.sectionNote && <div className="mt-1 max-w-sm text-xs text-amber-700">{i.sectionNote}</div>}</td>
                   <td className={td}>
                     <select className={`${input} min-w-44`} disabled={p.readOnly} value={r.offeringId} onChange={(e) => set(i.key, { offeringId: e.target.value })} aria-label={`Section for ${i.title}`}>
                       {!r.offeringId && <option value="">Choose section…</option>}
-                      {i.choices.map((c) => (<option key={c.offeringId} value={c.offeringId}>{c.section ?? "no section"} · {c.courseCode} · {c.cbaCode ?? "no CBA"}{c.crossProgram ? " (other program)" : ""}</option>))}
+                      {i.choices.map((c) => (<option key={c.offeringId} value={c.offeringId}>{c.section ?? "no section"} · {i.status === "ELECTIVE_CHOICE" ? `${c.courseName} · ` : ""}{c.courseCode} · {c.cbaCode ?? "no CBA"}{c.crossProgram ? " (other program)" : ""}</option>))}
                     </select>
                     {choice && (() => { const pr = partnerOf(i); const pc = pr && rows[pr.key]?.include && r.include ? pr.choices.find((c) => c.offeringId === rows[pr.key].offeringId) : null; return pc && pc.section !== choice.section ? <div className="mt-1 text-xs text-rose-600">Lab and theory must be in the same section ({pc.section ?? "none"} vs {choice.section ?? "none"}).</div> : null; })()}
                     {choice && !choice.exportable && <div className="mt-1 text-xs text-rose-600">{choice.issues.join("; ")} — can&apos;t be finalized until an Admin fixes it</div>}
