@@ -19,6 +19,7 @@ model User {
   authProvider String   @default("LOCAL") // LOCAL | LDAP | ACTIVE_DIRECTORY | ENTRA_ID
   externalId   String?
   active       Boolean  @default(true)
+  batches      String   @default("") // advisors: comma-separated batches they advise, e.g. "CYS23,CYS24"
   students     Student[]
 }
 

@@ -27,7 +27,7 @@ For the department's APRIS administrators (and the IT person supporting the serv
 
 **Admin → Manage users**
 
-- **Add a user:** username, full name, role, **university email** (`@dsu.edu.pk`; **required for advisors**), temporary password (12+ characters, not containing the username). An advisor's email matters: **it is where students' replies to registration emails are delivered** (see A11), so use their real, monitored mailbox.
+- **Add a user:** username, full name, role, **university email** (`@dsu.edu.pk`; **required for advisors**), temporary password (6+ characters). An advisor's email matters: **it is where students' replies to registration emails are delivered** (see A11), so use their real, monitored mailbox. **Batches (advisors):** type the batches an advisor looks after, e.g. `CYS23, CYS24` (program + intake year, the first letters and two digits of the Registration ID). A batch belongs to one advisor. Existing students of those batches who have no advisor are assigned immediately, and students an Admin adds later go to the batch's advisor. Batches can be edited in the *Batches* column of the Users table.
 - **Change an email:** edit it in the *Email* column of the users table and press *Save* (audited). It applies to registrations committed from then on; emails already sent keep their original reply address. The user **must change it at first login**. Give it to them in person or by phone — not with the link in the same message.
 - **Change a role:** the *Set* button next to their role. Takes effect on their next click. You can't change your own role, and one active Admin must always remain. Changing an advisor to another role does **not** reassign their students — reassign first.
 - **Reset a password:** enter a new temporary password → *Reset*. The user is signed out everywhere and must change it.
@@ -264,7 +264,7 @@ sudo -u apris bash -c 'cd /opt/apris/current && set -a && . /etc/apris/apris.env
 ## C1. An Admin forgot their password
 Use another Admin: **Manage users → Reset**. If **no** Admin can log in, on the server:
 ```bash
-read -rs -p "Temporary password (12+ chars): " PW; echo
+read -rs -p "Temporary password (6+ chars): " PW; echo
 sudo -u apris bash -c "cd /opt/apris/current && set -a && . /etc/apris/apris.env && set +a && ADMIN_NEW_PASSWORD='$PW' npm run admin:reset -- admin"
 unset PW
 ```

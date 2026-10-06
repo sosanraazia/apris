@@ -13,11 +13,11 @@ export const burnTime = async (pw: string) => {
   await bcrypt.compare(pw, await dummy);
 };
 
-export function passwordProblem(pw: string, username = ""): string | null {
-  if (pw.length < 12) return "Password must be at least 12 characters";
+// Policy: at least 6 characters, nothing else required (decided by the department). Sign-in lockout and throttling still apply.
+export const MIN_PASSWORD = 6;
+export function passwordProblem(pw: string): string | null {
+  if (pw.length < MIN_PASSWORD) return `Password must be at least ${MIN_PASSWORD} characters`;
   if (pw.length > 128) return "Password is too long";
-  if (username && pw.toLowerCase().includes(username.toLowerCase())) return "Password must not contain the username";
-  if (/^(.)\1+$/.test(pw) || /^(password|12345678|qwertyuiop)/i.test(pw)) return "Password is too easy to guess";
   return null;
 }
 

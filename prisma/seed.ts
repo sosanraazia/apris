@@ -29,7 +29,7 @@ const USERS = (PROD || INIT ? DEV_USERS.slice(0, 1) : DEV_USERS).map((u) => ({
 async function main() {
   for (const u of USERS) {
     if (INIT && (await db.user.findUnique({ where: { username: u.username } }))) continue; // never reset an existing password
-    const problem = passwordProblem(u.password, u.username);
+    const problem = passwordProblem(u.password);
     if (problem) throw new Error(`INITIAL_ADMIN_PASSWORD rejected: ${problem}`);
     const passwordHash = await hashPassword(u.password);
     await db.user.upsert({

@@ -7,7 +7,7 @@
 - GitHub access from the VM is a **read-only deploy key**; the deploy service account has no shell and can only restart the app service with root.
 
 ## Authentication and sessions
-- bcrypt (cost 12); passwords need 12+ characters, must not contain the username, and are checked on every change.
+- bcrypt (cost 12); passwords need 6+ characters and nothing else (department decision); sign-in lockout and throttling apply.
 - Login is timing-safe against username guessing; failed attempts lock the IP+username for 10 minutes (5 tries) and an IP for 10 minutes (25 tries); nginx additionally rate-limits `/login`.
 - Signed 8-hour cookie: `HttpOnly`, `SameSite=Lax`, `Secure` in production. The user is re-checked in the database on **every request**, so disabling an account or changing a role applies immediately, and changing/resetting a password signs that user out everywhere.
 - Roles (Admin / HoD / Advisor) are enforced on the server in every page, route and server action; advisors only ever reach their own students (list, profile, documents, uploads, registration, export).

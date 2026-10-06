@@ -11,7 +11,7 @@ For academic advisors registering students each semester. Read time: about 10 mi
 ## 1. Signing in
 
 1. Open the APRIS address your Admin gave you and sign in with your username.
-2. On first login you must **change your temporary password** (12+ characters). Do not share it.
+2. On first login you must **change your temporary password** (6+ characters). Do not share it.
 3. To change it later, click your name at the top right.
 4. Sign out when you leave your desk. Everything you do — logins, viewing a student, saving, finalizing — is recorded with your name.
 

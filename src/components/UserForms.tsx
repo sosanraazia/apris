@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { createUserAction, resetPasswordAction, updateUserEmailAction } from "@/app/admin/users/actions";
+import { createUserAction, resetPasswordAction, updateBatchesAction, updateUserEmailAction } from "@/app/admin/users/actions";
 import { btn, btnGhost, input, label, Notice } from "./ui";
 
 export function CreateUserForm() {
@@ -13,7 +13,8 @@ export function CreateUserForm() {
         <div><label className={label} htmlFor="u-role">Role</label><select id="u-role" name="role" className={input} defaultValue="ADVISOR"><option value="ADVISOR">Academic Advisor</option><option value="HOD">Head of Department</option><option value="ADMIN">Admin</option></select></div>
         <div><label className={label} htmlFor="u-email">University email (required for advisors — student replies go here)</label><input id="u-email" name="email" type="email" className={input} placeholder="firstname.lastname@dsu.edu.pk" autoComplete="off" /></div>
         <div><label className={label} htmlFor="u-dept">Department</label><input id="u-dept" name="department" className={input} defaultValue="Software Engineering" /></div>
-        <div><label className={label} htmlFor="u-pass">Temporary password (12+ chars — user must change it at first login)</label><input id="u-pass" name="password" type="password" className={input} required autoComplete="new-password" /></div>
+        <div><label className={label} htmlFor="u-batches">Batches advised (advisors only — e.g. CYS23, CYS24, SE24)</label><input id="u-batches" name="batches" className={input} placeholder="CYS23, CYS24" autoComplete="off" /></div>
+        <div><label className={label} htmlFor="u-pass">Temporary password (6+ chars — user must change it at first login)</label><input id="u-pass" name="password" type="password" className={input} required autoComplete="new-password" /></div>
       </div>
       {st?.error && <Notice tone="red">{st.error}</Notice>}
       {st?.ok && <Notice tone="green">{st.ok}</Notice>}
@@ -27,7 +28,7 @@ export function ResetPasswordForm({ id }: { id: number }) {
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={id} />
-      <input name="password" type="password" placeholder="New password (12+)" className={`${input} w-44`} autoComplete="new-password" aria-label="New password" />
+      <input name="password" type="password" placeholder="New password (6+)" className={`${input} w-44`} autoComplete="new-password" aria-label="New password" />
       <button className={btnGhost} disabled={pending}>Reset</button>
       {st?.error && <span className="text-xs text-rose-600">{st.error}</span>}
       {st?.ok && <span className="text-xs text-emerald-700">Done</span>}
@@ -44,6 +45,19 @@ export function EmailForm({ id, email, required }: { id: number; email: string; 
       <button className={btnGhost} disabled={pending}>Save</button>
       {st?.error && <span className="text-xs text-rose-600">{st.error}</span>}
       {st?.ok && <span className="text-xs text-emerald-700">Saved</span>}
+    </form>
+  );
+}
+
+export function BatchesForm({ id, batches }: { id: number; batches: string }) {
+  const [st, action, pending] = useActionState(updateBatchesAction, undefined);
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="id" value={id} />
+      <input name="batches" defaultValue={batches.split(",").filter(Boolean).join(", ")} placeholder="CYS23, CYS24" className={`${input} w-40`} aria-label="Batches advised" autoComplete="off" />
+      <button className={btnGhost} disabled={pending}>Save</button>
+      {st?.error && <span className="text-xs text-rose-600">{st.error}</span>}
+      {st?.ok && <span className="text-xs text-emerald-700">{st.ok}</span>}
     </form>
   );
 }

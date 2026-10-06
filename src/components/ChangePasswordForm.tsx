@@ -8,7 +8,7 @@ export function ChangePasswordForm() {
   return (
     <div className="mx-auto mt-10 max-w-md space-y-4">
       <h1 className="text-xl font-semibold">Change password</h1>
-      <p className="text-sm text-slate-600">Use at least 12 characters. If an Admin gave you a temporary password you must change it before continuing.</p>
+      <p className="text-sm text-slate-600">Use at least 6 characters. If an Admin gave you a temporary password you must change it before continuing.</p>
       <form action={action} className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div><label className={label} htmlFor="current">Current password</label><input id="current" name="current" type="password" className={input} autoComplete="current-password" required /></div>
         <div><label className={label} htmlFor="next">New password</label><input id="next" name="next" type="password" className={input} autoComplete="new-password" required /></div>

@@ -13,7 +13,7 @@ export async function changePasswordAction(_: { error?: string } | undefined, fo
   if (!user?.passwordHash || !(await verifyPassword(current, user.passwordHash))) return { error: "Current password is incorrect" };
   if (next !== confirm) return { error: "New passwords don't match" };
   if (next === current) return { error: "Choose a different password" };
-  const problem = passwordProblem(next, user.username);
+  const problem = passwordProblem(next);
   if (problem) return { error: problem };
   const updated = await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(next), mustChangePassword: false } });
   await audit({ userId: user.id, action: "PASSWORD_CHANGED" });

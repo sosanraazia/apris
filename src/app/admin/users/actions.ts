@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { audit } from "@/lib/services/audit";
 import { checkStaffEmail } from "@/lib/userEmail";
+import { parseBatches } from "@/lib/batches";
+import { assignUnassignedInBatches, batchConflict } from "@/lib/services/batches";
 
 type R = { ok?: string; error?: string } | undefined;
 const USERNAME = /^[a-z0-9._-]{3,32}$/;
@@ -18,7 +20,7 @@ export async function createUserAction(_: R, form: FormData): Promise<R> {
   if (!USERNAME.test(username)) return { error: "Username: 3–32 chars, letters, digits, . _ -" };
   if (!name) return { error: "Full name is required" };
   if (!["ADMIN", "HOD", "ADVISOR"].includes(role)) return { error: "Choose a role" };
-  const problem = passwordProblem(password, username);
+  const problem = passwordProblem(password);
   if (problem) return { error: problem };
   if (await db.user.findUnique({ where: { username } })) return { error: "That username already exists" };
   // Advisors must have a real university address: student replies are delivered to it. Others may leave it blank for now.
@@ -30,10 +32,20 @@ export async function createUserAction(_: R, form: FormData): Promise<R> {
     email = chk.email;
   } else email = `${username}@dsu.edu.pk`;
   if (await db.user.findUnique({ where: { email } })) return { error: "Another account already uses that email address" };
-  await db.user.create({ data: { username, name, role, email, department: String(form.get("department") ?? "").trim() || null, passwordHash: await hashPassword(password), mustChangePassword: true } });
-  await audit({ userId: s.userId, action: "USER_CREATED", after: { username, role } });
+  let batches: string[] = [];
+  const rawBatches = String(form.get("batches") ?? "").trim();
+  if (role === "ADVISOR" && rawBatches) {
+    const pb = parseBatches(rawBatches);
+    if ("error" in pb) return { error: pb.error };
+    const clash = await batchConflict(pb.batches);
+    if (clash) return { error: `${clash.batch} is already advised by ${clash.name}.` };
+    batches = pb.batches;
+  }
+  const user = await db.user.create({ data: { username, name, role, email, department: String(form.get("department") ?? "").trim() || null, passwordHash: await hashPassword(password), mustChangePassword: true, batches: batches.join(",") } });
+  await audit({ userId: s.userId, action: "USER_CREATED", after: { username, role, batches } });
+  const assigned = batches.length ? await assignUnassignedInBatches(user.id, batches) : 0;
   revalidatePath("/admin/users");
-  return { ok: `Created ${role.toLowerCase()} “${username}”.` };
+  return { ok: `Created ${role.toLowerCase()} “${username}”.${batches.length ? ` Batches: ${batches.join(", ")}${assigned ? ` — ${assigned} existing student(s) assigned.` : "."}` : ""}` };
 }
 
 export async function resetPasswordAction(_: R, form: FormData): Promise<R> {
@@ -42,7 +54,7 @@ export async function resetPasswordAction(_: R, form: FormData): Promise<R> {
   const password = String(form.get("password") ?? "");
   const u = await db.user.findUnique({ where: { id } });
   if (!u) return { error: "User not found" };
-  const problem = passwordProblem(password, u.username);
+  const problem = passwordProblem(password);
   if (problem) return { error: problem };
   await db.user.update({ where: { id }, data: { passwordHash: await hashPassword(password), mustChangePassword: true } });
   await audit({ userId: s.userId, action: "PASSWORD_RESET", after: { username: u.username } });
@@ -87,4 +99,20 @@ export async function updateUserEmailAction(_: R, form: FormData): Promise<R> {
   await audit({ userId: s.userId, action: "USER_EMAIL_CHANGED", before: { username: u.username, email: u.email }, after: { username: u.username, email: chk.email } });
   revalidatePath("/admin/users");
   return { ok: "Email updated. It applies to registrations committed from now on." };
+}
+
+export async function updateBatchesAction(_: R, form: FormData): Promise<R> {
+  const s = await requireRole("ADMIN");
+  const id = Number(form.get("id"));
+  const u = await db.user.findUnique({ where: { id } });
+  if (!u || u.role !== "ADVISOR") return { error: "Batches are for advisors" };
+  const pb = parseBatches(String(form.get("batches") ?? ""));
+  if ("error" in pb) return { error: pb.error };
+  const clash = await batchConflict(pb.batches, id);
+  if (clash) return { error: `${clash.batch} is already advised by ${clash.name}.` };
+  await db.user.update({ where: { id }, data: { batches: pb.batches.join(",") } });
+  const assigned = await assignUnassignedInBatches(id, pb.batches);
+  await audit({ userId: s.userId, action: "USER_BATCHES_CHANGED", before: { username: u.username, batches: u.batches }, after: { username: u.username, batches: pb.batches.join(","), assigned } });
+  revalidatePath("/admin/users");
+  return { ok: assigned ? `Saved. ${assigned} student(s) assigned.` : "Saved." };
 }

@@ -10,7 +10,7 @@ const db = new PrismaClient();
   const username = (process.argv[2] ?? "").trim().toLowerCase();
   const pw = process.env.ADMIN_NEW_PASSWORD ?? "";
   if (!username) throw new Error("Usage: ADMIN_NEW_PASSWORD='…' npm run admin:reset -- <username>");
-  const problem = passwordProblem(pw, username);
+  const problem = passwordProblem(pw);
   if (problem) throw new Error(`ADMIN_NEW_PASSWORD rejected: ${problem}`);
   const user = await db.user.findUnique({ where: { username } });
   if (!user) throw new Error(`No such user: ${username}`);
