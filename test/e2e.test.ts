@@ -1,3 +1,4 @@
+import writeXlsxFile from "write-excel-file/node";
 import { describe, it, expect } from "vitest";
 import { existsSync } from "node:fs";
 import { parseTranscriptPdf } from "../src/lib/parsers/transcript";
@@ -38,12 +39,24 @@ describe("parsers", () => {
 });
 
 describe("offering import", () => {
-  it("normalises swapped columns and flags CBA problems", async () => {
-    const { rows, normalizedCount } = await parseOfferingWorkbook(d("Fall2026CourseOffering.xlsx"));
-    expect(normalizedCount).toBeGreaterThan(20);
+  it("the seed workbook is complete: every row has its own CBA code and a section", async () => {
+    const { rows, notes } = await parseOfferingWorkbook(d("Fall2026CourseOffering.xlsx"));
+    expect(rows.length).toBeGreaterThan(70);
+    expect(rows.every((r) => r.cbaCode && r.section)).toBe(true);
     const ai = rows.find((r) => r.sheet === "SE-5" && r.courseCode === "CS-3301" && r.section === "SE-5A")!;
     expect(ai.cbaCode).toBe("17362");
-    expect(rows.filter((r) => r.issues.some((i) => i.startsWith("Duplicate CBA 17349"))).length).toBe(2);
+    expect(new Set(rows.map((r) => r.cbaCode)).size).toBe(rows.length); // every row has its own CBA code
+    expect(notes).toEqual([]);
+  });
+  it("normalises swapped columns in a workbook (invented rows)", async () => {
+    const buf = Buffer.from(await writeXlsxFile([{ sheet: "SE-5", data: [
+      ["CBA Code", "Course Code", "Class & Section", "Course Name"],
+      [17001, "SE-5A", "CS-3301", "Artificial Intelligence"], // section and course code swapped
+      [17002, "CS-3301", "SE-5B", "Artificial Intelligence"],
+    ].map((r) => r.map((v) => (typeof v === "number" ? { value: v, type: Number } : { value: v, type: String }))) }]).toBuffer());
+    const { rows, normalizedCount } = await parseOfferingWorkbook(buf);
+    expect(normalizedCount).toBe(1);
+    expect(rows.map((r) => [r.courseCode, r.section])).toEqual([["CS-3301", "SE-5A"], ["CS-3301", "SE-5B"]]);
   });
 });
 

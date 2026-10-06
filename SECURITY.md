@@ -41,3 +41,9 @@
 - `npm audit` reports a `deepmerge-ts` issue inside the Prisma CLI (build-time tooling, no user input reaches it).
 - The deploy scripts have not yet been run on a real Ubuntu VM.
 - Someone with sudo/root on the VM can read the data. Restrict who has it.
+
+## Repository hygiene (checked 2026-10-07)
+- Never in git: `.env*` (only the placeholder `.env.example` is tracked), `prisma/dev.db*`, `storage/`, `data/sample/`, `.dev-credentials.txt`. A scan of the working tree and all history found no passwords, tokens, API keys, private keys, personal emails, student names or sample PDFs. `data/Fall2026CourseOffering.xlsx` is generated from APRIS (`scripts/export-offering-seed.ts`) and holds no student IDs; do not commit an IT sheet that has IDs typed into it.
+- Tests, docs and scripts use invented IDs only (the PRD example `SE251093` and `SE259xxx` / `CYS259xxx` / `CYS239xxx`). Never put a real student's ID, name or CNIC in a commit message, doc or test.
+- The repository must be **private** (it contains the department's rules, POS and offering data). Keep GitHub *secret scanning with push protection* and *Dependabot alerts* on.
+- Known advisories (`npm audit --omit=dev`): `prisma` CLI / `deepmerge-ts` (build-time CLI only, fix needs a major upgrade to Prisma 8, still release-candidate) — track and upgrade when stable.

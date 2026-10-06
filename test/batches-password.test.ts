@@ -15,7 +15,7 @@ describe("password policy", () => {
 
 describe("batches", () => {
   it("takes the batch from the registration ID", () => {
-    expect(batchOf("CYS232001")).toBe("CYS23");
+    expect(batchOf("CYS239001")).toBe("CYS23");
     expect(batchOf("se251093")).toBe("SE25");
     expect(batchOf("12345")).toBeNull();
   });

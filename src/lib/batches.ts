@@ -1,4 +1,4 @@
-/** A batch is the program letters plus the two-digit intake year of the Registration ID: CYS232001 → CYS23, SE251093 → SE25. */
+/** A batch is the program letters plus the two-digit intake year of the Registration ID: CYS239001 → CYS23, SE251093 → SE25. */
 export const batchOf = (registrationId: string): string | null => registrationId.toUpperCase().match(/^([A-Z]+)(\d{2})/)?.slice(1).join("") ?? null;
 
 const BATCH = /^[A-Z]{2,4}\d{2}$/;

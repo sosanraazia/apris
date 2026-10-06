@@ -21,10 +21,13 @@ npm test                       # parser + rules-engine tests
 git clone git@github.com:sosanraazia/apris.git && cd apris && git checkout clean-main
 npm ci
 cp .env.example .env            # then set SESSION_SECRET to 32+ random characters
-npm run db:reset                # creates the database, POS variants, prerequisites, Fall 2026 offerings, elective assignments, dev accounts
+npx prisma migrate deploy       # creates the empty database from the migrations
+npm run seed                    # POS variants, prerequisites, Fall 2026 offerings, elective assignments, dev accounts (DEV ONLY; production uses seed:init)
 cat .dev-credentials.txt        # random dev passwords (git-ignored); `npm run dev:credentials` issues new ones
 npm run dev                     # http://localhost:3000
 ```
+
+(`npm run db:reset` wipes and rebuilds an existing development database; never run it on real data.)
 
 Read `docs/SESSION_HANDOFF.md` first: what is built, decisions made, what is open. **Student data is never in git** (`prisma/dev.db`, `storage/`, `data/sample/`): on a new machine you start with an empty student list and add students by uploading their PDFs; the Award Lists (Admin → Section lists) are uploaded again from the departments' files.
 
