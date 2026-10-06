@@ -10,6 +10,8 @@ const ALIASES: Record<string, string> = {
   "parallel and distributed computing": "parallel and distributed computing",
   "final year project 1": "final year project i",
   "final year project 2": "final year project ii",
+  "organizational behavior": "organizational behaviour",
+  "management information systems": "management information system",
   "discrete structure": "discrete structures", // typo in Fall 2026 offering sheet
   "probability and stattistics": "probability and statistics", // typo in BS-CYS-2024 PoS
 };

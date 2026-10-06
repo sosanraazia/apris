@@ -1,6 +1,8 @@
 import { courseKey, isLabCode, placeholderMatches, theoryKeyOf } from "./keys";
+import { classifyElectiveSlot, mappedKey, mappingFor, slotLabel } from "./electives";
 import type {
   AttemptRow,
+  ElectiveMapRow,
   OfferingChoice,
   OfferingRow,
   PosCourseRow,
@@ -35,6 +37,19 @@ export interface PosProgressItem extends PosCourseRow {
   grade?: string;
 }
 
+/** Course key assigned to this elective slot (null = slot not elective, or no course assigned). */
+function mappedFor(slot: PosCourseRow, electives: ElectiveMapRow[]): string | null {
+  const m = mappingFor(slot, electives);
+  return m ? mappedKey(m, isLabCode(slot.code)) : null;
+}
+
+/** Keys (theory and lab) of every course assigned to some elective slot; they must not be taken by a different slot via the code-pattern fallback. */
+function reservedKeys(electives: ElectiveMapRow[]): Set<string> {
+  const out = new Set<string>();
+  for (const e of electives) if (e.titleKey) { out.add(e.titleKey); out.add(`${e.titleKey}#lab`); }
+  return out;
+}
+
 /** Map transcript attempts onto POS rows. Codes are POS-version specific, titles are the cross-version fallback. */
 function buildSlots(student: StudentInput, s: Settings) {
   const attempts = student.attempts;
@@ -50,10 +65,24 @@ function buildSlots(student: StudentInput, s: Settings) {
     slot.failed = !slot.passed && mine.length > 0;
     slot.filledBy = passedAttempt;
   }
-  // leftover passed attempts fill elective placeholder slots by code pattern (each attempt only once)
+  // leftover passed attempts fill elective placeholder slots (each attempt only once): first the course the department assigned to the slot, then any code-pattern match
   const leftovers = attempts.filter((a) => !used.has(a) && isPass(a, s)).sort((a, b) => a.termOrder - b.termOrder);
-  for (const slot of slots.filter((x) => x.isPlaceholder)) {
-    const a = leftovers.find((l) => !used.has(l) && isLabCode(l.code) === slot.isLab && placeholderMatches(slot.code, l.code));
+  const electives = student.electives ?? [];
+  const placeholders = slots.filter((x) => x.isPlaceholder);
+  for (const slot of placeholders) {
+    const want = mappedFor(slot, electives);
+    const alt = slot.alsoAccepts ? courseKey("X-0000", slot.alsoAccepts) : null;
+    const a = want && leftovers.find((l) => !used.has(l) && (courseKey(l.code, l.title) === want || courseKey(l.code, l.title) === alt));
+    if (a) {
+      used.add(a);
+      slot.passed = true;
+      slot.filledBy = a;
+    }
+  }
+  const reserved = reservedKeys(electives);
+  for (const slot of placeholders.filter((x) => !x.passed)) {
+    if (mappedFor(slot, electives)) continue; // an assigned slot only takes its assigned course
+    const a = leftovers.find((l) => !used.has(l) && !reserved.has(courseKey(l.code, l.title)) && isLabCode(l.code) === slot.isLab && placeholderMatches(slot.code, l.code));
     if (a) {
       used.add(a);
       slot.passed = true;
@@ -67,7 +96,8 @@ function buildSlots(student: StudentInput, s: Settings) {
 export function findUnmatchedAttempts(student: StudentInput, s: Settings): AttemptRow[] {
   const { used } = buildSlots(student, s);
   const placeholders = student.pos.filter((p) => p.isPlaceholder);
-  return student.attempts.filter((a) => !used.has(a) && !placeholders.some((p) => placeholderMatches(p.code, a.code)));
+  const reserved = reservedKeys(student.electives ?? []);
+  return student.attempts.filter((a) => !used.has(a) && !reserved.has(courseKey(a.code, a.title)) && !placeholders.some((p) => placeholderMatches(p.code, a.code)));
 }
 
 export function completedCHOf(attempts: AttemptRow[], s: Settings): number {
@@ -123,6 +153,8 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
   const target = targetSemesterOf(student.homeSection, student.attempts);
   const { slots } = buildSlots(student, s);
   const completedCH = completedCHOf(student.attempts, s);
+  const electives = student.electives ?? [];
+  const reserved = reservedKeys(electives);
   const prereqs = prereqIndex(prereqRows);
   const passedKeys = new Set(slots.filter((x) => x.passed && !x.isPlaceholder).map((x) => courseKey(x.code, x.title)));
   student.attempts.filter((a) => isPass(a, s)).forEach((a) => passedKeys.add(courseKey(a.code, a.title)));
@@ -178,11 +210,15 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
     // offerings
     // "ahead" courses only count if offered on the student's own semester sheet (e.g. SE-3), not another cohort's
     const pool0 = opts.ahead ? usable.filter((o) => Number(o.sheet.match(/-(\d+)$/)?.[1]) === target) : usable;
-    const matches = pool0.filter((o) =>
-      sl.isPlaceholder
-        ? isLabCode(o.courseCode) === sl.isLab && placeholderMatches(sl.code, o.courseCode) && !posKeys.has(courseKey(o.courseCode, o.courseName))
-        : courseKey(o.courseCode, o.courseName) === key,
-    );
+    const assigned = sl.isPlaceholder ? mappedFor(sl, electives) : null;
+    const slotId = sl.isPlaceholder ? classifyElectiveSlot(sl.title) : null;
+    const matches = pool0.filter((o) => {
+      const ok = courseKey(o.courseCode, o.courseName);
+      if (!sl.isPlaceholder) return ok === key;
+      if (passedKeys.has(ok) || posKeys.has(ok)) return false; // never offer a course the student already passed or has as a regular POS course
+      if (assigned) return ok === assigned; // the department assigned this slot a specific course
+      return isLabCode(o.courseCode) === sl.isLab && placeholderMatches(sl.code, o.courseCode) && !reserved.has(ok);
+    });
     const own = matches.filter((o) => o.program === student.program);
     const pool = own.length ? own : matches;
     const home = student.homeSection?.toUpperCase();
@@ -191,6 +227,9 @@ export function recommend(student: StudentInput, prereqRows: PrereqRow[], offeri
       .sort((a, b) => Number(b.section === home) - Number(a.section === home) || (a.section ?? "~").localeCompare(b.section ?? "~"));
     base.choices = choices;
 
+    if (!choices.length && sl.isPlaceholder && slotId && !assigned && electives.some((e) => e.category === slotId.category && e.slot === slotId.slot))
+      return { ...base, status: "NOT_OFFERED", reason: `${sl.title} — ${slotLabel(slotId)} has no course assigned yet (N/A); nothing to register for it this semester.` };
+    if (!choices.length && assigned) return { ...base, status: "NOT_OFFERED", reason: `${sl.title} — assigned course is ${electives.find((e) => mappingFor(sl, [e]))?.courseTitle}, which is not offered this semester.` };
     if (!choices.length) return { ...base, status: "NOT_OFFERED", reason: `${sl.title} — academically due (semester ${sl.semester}) but not offered this semester.` };
 
     if (sl.isPlaceholder) {

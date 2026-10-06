@@ -8,6 +8,7 @@ import { SemesterError, openRegistrations, openSemester } from "@/lib/services/s
 import { RosterError, applyRosterDraft, buildRosterDraft, loadRosterDraft } from "@/lib/services/roster";
 import { PosError, applyPosDraft, buildPosDraft, loadPosDraft, setPosPublished } from "@/lib/services/pos";
 import { audit } from "@/lib/services/audit";
+import { setElectiveCourse } from "@/lib/services/electives";
 import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
 import type { Settings } from "@/lib/rules/types";
 
@@ -194,4 +195,17 @@ export async function applyRosterAction(_: { error?: string } | undefined, form:
   }
   revalidatePath("/admin/rosters");
   redirect("/admin/rosters?imported=1");
+}
+
+export async function setElectiveAction(form: FormData) {
+  const s = await requireRole("ADMIN");
+  const posCode = String(form.get("posCode") ?? "");
+  const category = String(form.get("category") ?? "");
+  const slot = Number(form.get("slot"));
+  const title = String(form.get("courseTitle") ?? "").trim().slice(0, 120);
+  if (!/^BS-[A-Z]+-\d{4}$/.test(posCode) || (category !== "UNIVERSITY" && category !== "DOMAIN") || !Number.isInteger(slot) || slot < 1 || slot > 12) return;
+  const before = await db.electiveMapping.findUnique({ where: { posCode_category_slot: { posCode, category, slot } } });
+  await setElectiveCourse(posCode, category, slot, title || null);
+  await audit({ userId: s.userId, action: "ELECTIVE_MAPPING_CHANGED", before: { course: before?.courseTitle ?? null }, after: { course: title || null }, reason: `${posCode} ${category} elective ${slot}` });
+  revalidatePath("/admin/electives");
 }

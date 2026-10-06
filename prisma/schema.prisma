@@ -230,3 +230,17 @@ model SectionRoster {
   @@unique([registrationId, term, sourceSection])
   @@index([registrationId])
 }
+
+/// Which real course fills an elective slot of a Plan of Study (all variants of a POS share it).
+/// courseTitle null = slot deliberately unassigned ("N/A"): no course has been announced for it yet.
+model ElectiveMapping {
+  id          Int     @id @default(autoincrement())
+  posCode     String // BS-SE-2020
+  category    String // UNIVERSITY | DOMAIN
+  slot        Int // 1-based slot number inside the category
+  semester    Int? // semester the POS places the slot in (informational)
+  courseTitle String?
+  titleKey    String? // courseKey() of courseTitle, used for matching
+
+  @@unique([posCode, category, slot])
+}

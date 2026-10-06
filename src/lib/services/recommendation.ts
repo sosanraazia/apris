@@ -1,5 +1,7 @@
 import { db } from "../db";
 import { getSettings } from "../settings";
+import { loadElectiveMap } from "./electives";
+import { applySlotOverrides, isElectiveSlotRow } from "../rules/electives";
 import { posProgress, recommend } from "../rules/engine";
 import type { AttemptRow, OfferingRow, PrereqRow, StudentInput, Standing } from "../rules/types";
 import type { PosVariant, ProgramCode } from "../parsers/common";
@@ -25,7 +27,8 @@ export async function loadStudentInput(studentId: number): Promise<{ input: Stud
       posVariant: st.pos.variant as PosVariant,
       homeSection: st.homeSection,
       standing: st.standing as Standing,
-      pos: st.pos.courses.map((c) => ({ semester: c.semester, code: c.code, title: c.title, ch: c.ch, isPlaceholder: c.isPlaceholder })),
+      pos: applySlotOverrides(st.pos.posCode, st.pos.courses.map((c) => ({ semester: c.semester, code: c.code, title: c.title, ch: c.ch, isPlaceholder: isElectiveSlotRow(c.title, c.isPlaceholder) }))),
+      electives: await loadElectiveMap(st.pos.posCode),
       attempts,
     },
   };

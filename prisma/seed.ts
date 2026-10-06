@@ -4,6 +4,7 @@ import { hashPassword, passwordProblem, randomPassword } from "../src/lib/passwo
 import { parsePosPdf } from "../src/lib/parsers/fulfillment";
 import { parseOfferingWorkbook, parsePrereqWorkbook } from "../src/lib/importers";
 import { DEFAULT_SETTINGS } from "../src/lib/rules/types";
+import { seedDefaultElectives } from "../src/lib/services/electives";
 
 const db = new PrismaClient();
 const data = (f: string) => `${__dirname}/../data/${f}`;
@@ -74,6 +75,9 @@ async function main() {
     await db.offering.createMany({ data: off.rows.map((r) => ({ ...r, semesterId: sem.id, issues: JSON.stringify(r.issues) })) });
   }
 
+  if (!INIT) await db.electiveMapping.deleteMany();
+  const electivesAdded = await seedDefaultElectives(db);
+  console.log(`Seeded: ${electivesAdded} elective assignments,`);
   console.log(`Seeded: ${posCount} POS variants, ${pr.length} prerequisites, ${off.rows.length} offerings (${off.normalizedCount} normalised)`);
 }
 

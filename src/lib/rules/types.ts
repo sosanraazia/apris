@@ -26,12 +26,24 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export type Standing = "NORMAL" | "PROBATION" | "RELEGATION" | "FROZEN" | "INACTIVE" | "WITHDRAWN" | "GRADUATED";
 
+export type ElectiveCategory = "UNIVERSITY" | "DOMAIN";
+
+/** One elective slot of a POS and the course assigned to it (titleKey null = not announced yet). */
+export interface ElectiveMapRow {
+  category: ElectiveCategory;
+  slot: number;
+  semester: number | null;
+  courseTitle: string | null;
+  titleKey: string | null;
+}
+
 export interface PosCourseRow {
   semester: number;
   code: string;
   title: string;
   ch: number;
   isPlaceholder: boolean;
+  alsoAccepts?: string; // title of a course the POS originally printed in this slot; a pass in it also fills the slot
 }
 
 export interface AttemptRow {
@@ -69,6 +81,7 @@ export interface StudentInput {
   homeSection: string | null;
   standing: Standing;
   pos: PosCourseRow[];
+  electives?: ElectiveMapRow[]; // assignments for this student's POS
   attempts: AttemptRow[];
 }
 
