@@ -220,6 +220,10 @@ export function RegistrationEditor(p: Props) {
           {(overload || low) && !(p.manual && low) && <div><input className={input} placeholder={overload ? `Total is above ${max} CH — enter the overload approval reference (required)` : `Total is below ${p.limits.min} CH — reason (required)`} value={loadReason} onChange={(e) => { setLoadReason(e.target.value); setDirty(true); }} /></div>}
           {(p.version > 0 || p.lateAdmin) && <input className={input} placeholder={p.phase === "ADD_DROP" ? "Reason for this add / drop (required)" : "Reason for changing a finalized registration (required to create a new version)"} value={changeReason} onChange={(e) => setChangeReason(e.target.value)} />}
           {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+          <div className={`flex flex-wrap items-baseline gap-x-3 rounded-md px-3 py-2 text-sm ${overload ? "bg-rose-50 text-rose-700" : low ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-700"}`} aria-live="polite">
+            <span className="font-semibold tabular-nums">Total credit hours: {total} CH</span>
+            <span className="text-xs">{chosen.length + adhoc.length} course(s) · minimum {p.limits.min} · limit {max}{overload ? " — above the limit" : low ? " — below the minimum" : ""}</span>
+          </div>
           <div className="flex gap-2">
             <button className={btnGhost} type="button" disabled={pending} onClick={save}>Save draft</button>
             <button className={btn} type="button" disabled={pending || dirty || !p.saved.length && dirty} onClick={fin} title={dirty ? "Save the draft first" : ""}>{p.version > 0 ? (p.phase === "ADD_DROP" ? "Commit add / drop" : "Commit change") : "Approve & finalize registration"}</button>
