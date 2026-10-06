@@ -37,6 +37,13 @@ export default async function Verify({ params }: PageProps<"/students/verify/[id
           <p className="mt-2">Upload the correct documents to continue. <Link className="underline" href="/students/new">Start again</Link></p>
         </Notice>
       )}
+      {draft.readingIssues?.length > 0 && (
+        <Notice tone="red">
+          <p className="font-semibold">Check the extraction before confirming</p>
+          <p className="mt-1">APRIS may not have read these documents perfectly. Compare the course table below with the PDF — especially lab courses, grades and credit hours — before you continue.</p>
+          <ul className="mt-2 list-disc pl-5">{draft.readingIssues.map((w) => <li key={w}>{w}</li>)}</ul>
+        </Notice>
+      )}
       {draft.warnings.length > 0 && <Notice tone="amber"><ul className="list-disc pl-5">{draft.warnings.map((w) => <li key={w}>{w}</li>)}</ul></Notice>}
       <div className="grid gap-4 lg:grid-cols-3">
         <Card title="Student" className="lg:col-span-1">
@@ -51,7 +58,7 @@ export default async function Verify({ params }: PageProps<"/students/verify/[id
         </Card>
       </div>
       <Card title={draft.existingStudentId ? "Confirm — update existing profile" : "Confirm"}>
-        <ConfirmProfileForm draftId={draft.id} name={t.name} fatherName={t.fatherName} homeSection={prefill} hint={sectionHint} suggested={!!suggestion.section} blocked={blocked} isUpdate={!!draft.existingStudentId} />
+        <ConfirmProfileForm draftId={draft.id} name={t.name} fatherName={t.fatherName} homeSection={prefill} hint={sectionHint} suggested={!!suggestion.section} needsAck={(draft.readingIssues?.length ?? 0) > 0} blocked={blocked} isUpdate={!!draft.existingStudentId} />
       </Card>
     </div>
   );

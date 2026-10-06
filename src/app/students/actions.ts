@@ -36,6 +36,7 @@ export async function confirmProfileAction(_: { error?: string } | undefined, fo
   const draft = await loadDraft(String(form.get("draftId") ?? ""));
   if (!draft || (draft.createdBy !== s.userId && s.role !== "ADMIN")) return { error: "This upload has expired — please upload the documents again." };
   if (draft.conflicts.length || !draft.posId) return { error: "Document conflicts must be resolved before creating the profile." };
+  if (draft.readingIssues?.length && form.get("ack") !== "on") return { error: "Please tick the box to confirm you checked the extracted course table against the PDF." };
   const homeRaw = String(form.get("homeSection") ?? "").trim().toUpperCase();
   if (homeRaw && !SECTION.test(homeRaw)) return { error: "Home section must look like SE-3A (or leave it blank to set later)." };
   const name = String(form.get("name") ?? "").trim();
@@ -60,7 +61,7 @@ export async function confirmProfileAction(_: { error?: string } | undefined, fo
   const snap = await db.snapshot.create({
     data: {
       studentId: student.id, verifiedById: s.userId, cgpa: t.cgpa, completedCH, requiredCH: t.requiredCH ?? f.requiredCH, homeSection: home,
-      courses: JSON.stringify(t.courses), terms: JSON.stringify(t.terms), warnings: JSON.stringify([...t.warnings, ...f.warnings]),
+      courses: JSON.stringify(t.courses), terms: JSON.stringify(t.terms), warnings: JSON.stringify(draft.readingIssues ?? [...t.warnings, ...f.warnings]),
       transcriptFile: files.transcriptFile, fulfillmentFile: files.fulfillmentFile,
     },
   });

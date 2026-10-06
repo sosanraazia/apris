@@ -44,6 +44,10 @@ export async function parseFulfillmentPdf(input: Buffer | string): Promise<Fulfi
   const cols = pages.flatMap((p) => p.cols);
   const warnings: string[] = [];
   const text = flat.join("\n");
+  if (!flat.slice(0, 10).some((l) => /fulfil+ment/i.test(l))) {
+    const heading = flat.slice(0, 10).find((l) => /report|transcript|list|enrol/i.test(l));
+    throw new Error(`This is not a Plan of Study Fulfillment Report${heading ? ` (it is: "${heading.slice(0, 50)}")` : ""}`);
+  }
 
   const reg = text.match(/Reg(?:istration)? No:?\s*([A-Z]{2,4}\d{5,8})/i)?.[1]?.toUpperCase();
   const name = text.match(/^Name:\s*(.+?)(?:\s+(?:PreMed|Date of Issue).*)?$/m)?.[1]?.trim();
@@ -57,8 +61,9 @@ export async function parseFulfillmentPdf(input: Buffer | string): Promise<Fulfi
 
   const completed = text.match(/Total Credit Hours Completed:?\s*(\d+)/i)?.[1];
   const required = text.match(/Total Credit Hours Required:?\s*(\d+)/i)?.[1];
-  const sum = pos.courses.reduce((a, c) => a + c.ch, 0);
-  if (required && Number(required) !== sum) warnings.push(`POS course credits (${sum}) ≠ required CH (${required})`);
+  // The report's own course table is best-effort only (some layouts overlap one semester's table with the next heading).
+  // Recommendations use the stored Plan of Study; the code, variant and stated total are what matter, and the stated total
+  // is compared with the stored POS when the profile is created.
 
   return { registrationId: reg, name, program, pos, completedCH: completed ? Number(completed) : null, requiredCH: required ? Number(required) : null, warnings };
 }

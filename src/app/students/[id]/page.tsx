@@ -149,6 +149,8 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
       </Notice>
     );
   const stale = !!ctx.semester.openedAt && !(await db.snapshot.findFirst({ where: { studentId, active: true, createdAt: { gte: ctx.semester.openedAt } } }));
+  const snapRow = await db.snapshot.findFirst({ where: { studentId, active: true }, select: { warnings: true } });
+  const docNotes: string[] = snapRow ? (JSON.parse(snapRow.warnings) as string[]) : [];
   const phase = effectivePhase(ctx.semester);
   const perm = canEdit(role as "ADMIN" | "HOD" | "ADVISOR", phase);
   const reg = await db.registration.findUnique({ where: { studentId_semesterId: { studentId, semesterId: ctx.semester.id } }, include: { items: true, versions: { orderBy: { version: "desc" } } } });
@@ -159,6 +161,13 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
   const allOfferings = ctx.offerings.map((o) => ({ id: o.dbId, courseCode: o.courseCode, courseName: o.courseName, section: o.section, cbaCode: o.cbaCode, ch: chMap.get(courseKey(o.courseCode, o.courseName)) ?? (/L$/.test(o.courseCode) ? 1 : 3) }));
   return (
     <div className="space-y-4">
+      {docNotes.length > 0 && (
+        <Notice tone="red">
+          <p className="font-semibold">Notes from reading this student&apos;s documents</p>
+          <ul className="mt-1 list-disc pl-5">{docNotes.map((n) => <li key={n}>{n}</li>)}</ul>
+          <p className="mt-1">Check these against the original PDFs before registering. If the documents were read wrongly, upload them again (Overview → Update profile).</p>
+        </Notice>
+      )}
       {stale && <Notice tone="amber"><b>Documents are from before {ctx.semester.name} opened.</b> Upload the latest Interim Transcript and POS Fulfillment Report (Overview → Update profile) and confirm the home section, so the suggestions use current results.</Notice>}
       <RegistrationEditor
         key={`${ctx.input.homeSection ?? "none"}-${reg?.version ?? 0}`}

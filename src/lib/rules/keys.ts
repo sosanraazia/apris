@@ -18,8 +18,9 @@ export const isLabCode = (code: string) => /L$/.test(code);
 
 /** Canonical identity of a course across POS versions: alias-resolved title, labs tagged separately. */
 export function courseKey(code: string, title: string): string {
-  const lab = isLabCode(code);
   let t = normTitle(title);
+  // a lab is a lab by its code (…L) or by its title (…Lab), so a transcript that lost the "L" still matches the lab row
+  const lab = isLabCode(code) || / lab$/.test(t);
   if (lab) t = t.replace(/ (lab|l)$/, "");
   t = ALIASES[t] ?? t;
   return lab ? `${t}#lab` : t;

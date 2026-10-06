@@ -11,21 +11,24 @@ export interface PageText {
 
 const HEADER = /^(Semester \d+|(Fall|Spring|Summer) Semester)/;
 
-function toLines(items: Item[]): string[] {
+function toLines(items: Item[], splitHeaders = false): string[] {
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
-  const rows: Item[][] = [];
+  // Semester headings are kept on their own line (never glued to a wrapped code or title fragment that happens to sit at the
+  // same height), and sorted *after* such a fragment, which belongs to the row above.
+  const rows: { items: Item[]; header: boolean }[] = [];
   for (const it of sorted) {
-    const row = rows.find((r) => Math.abs(r[0].y - it.y) < 2.5);
-    if (row) row.push(it);
-    else rows.push([it]);
+    const header = splitHeaders && HEADER.test(it.str.trim());
+    const row = rows.find((r) => r.header === header && Math.abs(r.items[0].y - it.y) < 2.5);
+    if (row) row.items.push(it);
+    else rows.push({ items: [it], header });
   }
   return rows
-    .sort((a, b) => b[0].y - a[0].y)
+    .sort((a, b) => b.items[0].y - (b.header ? 3 : 0) - (a.items[0].y - (a.header ? 3 : 0)))
     .map((r) => {
-      r.sort((a, b) => a.x - b.x);
+      r.items.sort((a, b) => a.x - b.x);
       let s = "";
       let end = -1e9;
-      for (const it of r) {
+      for (const it of r.items) {
         if (s && it.x - end > 1) s += " ";
         s += it.str;
         end = it.x + it.w;
@@ -52,7 +55,7 @@ export async function pdfPages(input: Buffer | Uint8Array | string): Promise<Pag
     for (const x of xs) if (!bounds.length || x - bounds[bounds.length - 1] > 30) bounds.push(x);
 
     let cols: string[];
-    if (bounds.length < 2) cols = toLines(items);
+    if (bounds.length < 2) cols = toLines(items, true);
     else {
       const buckets: Item[][] = bounds.map(() => []);
       for (const it of items) {
@@ -60,7 +63,7 @@ export async function pdfPages(input: Buffer | Uint8Array | string): Promise<Pag
         for (let b = 0; b < bounds.length; b++) if (it.x >= bounds[b] - 4) k = b;
         buckets[k].push(it);
       }
-      cols = buckets.flatMap(toLines);
+      cols = buckets.flatMap((b) => toLines(b, true));
     }
     pages.push({ flat: toLines(items), cols });
   }

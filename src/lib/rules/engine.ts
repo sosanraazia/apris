@@ -60,7 +60,14 @@ function buildSlots(student: StudentInput, s: Settings) {
       slot.filledBy = a;
     }
   }
-  return slots;
+  return { slots, used };
+}
+
+/** Transcript courses that correspond to nothing in the student's Plan of Study (and are not a free elective): a sign of a misread transcript or a wrong POS. */
+export function findUnmatchedAttempts(student: StudentInput, s: Settings): AttemptRow[] {
+  const { used } = buildSlots(student, s);
+  const placeholders = student.pos.filter((p) => p.isPlaceholder);
+  return student.attempts.filter((a) => !used.has(a) && !placeholders.some((p) => placeholderMatches(p.code, a.code)));
 }
 
 export function completedCHOf(attempts: AttemptRow[], s: Settings): number {
@@ -73,7 +80,7 @@ export function completedCHOf(attempts: AttemptRow[], s: Settings): number {
 
 export function posProgress(student: StudentInput, s: Settings): PosProgressItem[] {
   const target = targetSemesterOf(student.homeSection, student.attempts);
-  return buildSlots(student, s).map((sl) => ({
+  return buildSlots(student, s).slots.map((sl) => ({
     semester: sl.semester,
     code: sl.code,
     title: sl.title,
@@ -114,7 +121,7 @@ function toChoice(o: OfferingRow, student: StudentInput): OfferingChoice {
 export function recommend(student: StudentInput, prereqRows: PrereqRow[], offerings: OfferingRow[], s: Settings): Recommendation {
   const warnings: string[] = [];
   const target = targetSemesterOf(student.homeSection, student.attempts);
-  const slots = buildSlots(student, s);
+  const { slots } = buildSlots(student, s);
   const completedCH = completedCHOf(student.attempts, s);
   const prereqs = prereqIndex(prereqRows);
   const passedKeys = new Set(slots.filter((x) => x.passed && !x.isPlaceholder).map((x) => courseKey(x.code, x.title)));
