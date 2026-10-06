@@ -178,6 +178,14 @@ When an advisor adds a student, the **home section is pre-filled** from the depa
 4. *Conflicts.* A student who is a regular member of two sections in the same term gets no suggestion.
 5. The suggestion is flagged if that section has no offerings in the active semester.
 
+**Single-section programs (Cyber Security).** CYS runs one section (A), so a student who is on no list can still get a suggestion, in this order:
+1. **Their own list entry** (as above).
+2. **Their batch-mates:** if most regular members of the same admission batch were in one section last term, the student follows them. Example: the 28 batch-23 CYS students sat in `CYS-5A` in Spring 2026, so a batch-23 student on no list gets `CYS-6A` — which matches the Fall 2026 offering. This copes with a batch that runs a semester behind the dates. (Needs at least 3 batch-mates, 60% in one section.)
+3. **Admission-term arithmetic**, as a last resort: Fall 2025 admission → semester 3 in Fall 2026 → `CYS-3A`. It assumes no frozen terms, and it would be wrong for a batch that runs behind (for batch 23 it says semester 7).
+The set of single-section programs is `SINGLE_SECTION_PROGRAMS` in `src/lib/rosterRules.ts`. Upload the lists of *every* CYS section each term so the batch-mate rule has data.
+
+**Check the suggestion against the offering.** A suggested section with no offerings in the active semester is flagged on screen. Use it as a sanity check when a new offering workbook arrives: every section the lists point to (SE-3A/B/C, 5A/B, 7A/B, CYS-3A, 5A, 6A) should have offerings.
+
 **Check a student:** *Section lists → Check a student* shows what the lists say and what would be suggested.
 
 **Coverage — read this.** Award Lists are **per course**, so a student only appears if they took that course that term. Students who took none of the uploaded courses (for example **PreMed / minority students on a different course sequence**, new intake, or transferred students) will show "not found" and need the section entered by hand. Upload lists for **more courses** (or the official class lists) to widen coverage. Roughly 96% of listed students had a derivable section in the first test (410 students, 9 lists).

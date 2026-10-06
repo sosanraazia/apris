@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { db } from "../db";
 import { pdfPages } from "../parsers/pdfText";
-import { isRegularForSection, parseAwardListLines, suggestHomeSection, type AwardList, type SectionSuggestion } from "../rosterRules";
+import { SINGLE_SECTION_PROGRAMS, batchOf, isRegularForSection, parseAwardListLines, suggestFromAdmission, suggestFromCohort, suggestHomeSection, type AwardList, type SectionSuggestion } from "../rosterRules";
 import { audit } from "./audit";
 import { STORAGE_ROOT } from "./ingest";
 
@@ -112,10 +112,24 @@ export async function applyRosterDraft(draft: RosterDraft, userId: number) {
 }
 
 /** Suggestion for a student's home section in the active semester, from the stored section lists. */
-export async function suggestFor(registrationId: string, program: string): Promise<SectionSuggestion & { offered: boolean | null }> {
+export async function suggestFor(registrationId: string, program: string, admission?: string | null): Promise<SectionSuggestion & { offered: boolean | null }> {
   const id = registrationId.trim().toUpperCase();
   const [rows, sem] = await Promise.all([db.sectionRoster.findMany({ where: { registrationId: id } }), db.semester.findFirst({ where: { active: true } })]);
-  const s = suggestHomeSection(rows.map((r) => ({ term: r.term, sourceSection: r.sourceSection, regular: r.regular, program: r.program })), program, sem?.name ?? "");
+  let s = suggestHomeSection(rows.map((r) => ({ term: r.term, sourceSection: r.sourceSection, regular: r.regular, program: r.program })), program, sem?.name ?? "");
+  // Single-section programs (CYS): a student on no list follows their batch-mates, and only then the admission-term arithmetic.
+  if ((s.kind === "none" || s.kind === "conflict") && SINGLE_SECTION_PROGRAMS[program]) {
+    const batch = batchOf(id);
+    if (batch != null) {
+      const prefix = id.slice(0, id.search(/\d/)) + String(batch).padStart(2, "0");
+      const mates = await db.sectionRoster.findMany({ where: { registrationId: { startsWith: prefix }, program, regular: true }, select: { term: true, sourceSection: true } });
+      const c = suggestFromCohort(mates, program, sem?.name ?? "", batch);
+      if (c.kind === "suggested") s = c;
+    }
+    if (s.kind === "none" || s.kind === "conflict") {
+      const fb = suggestFromAdmission(program, admission, sem?.name ?? "");
+      if (fb.kind === "suggested" || fb.kind === "graduating") s = fb;
+    }
+  }
   let offered: boolean | null = null;
   if (s.section && sem) {
     offered = (await db.offering.count({ where: { semesterId: sem.id, active: true, section: s.section } })) > 0;

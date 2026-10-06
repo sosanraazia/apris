@@ -13,7 +13,7 @@ export default async function Verify({ params }: PageProps<"/students/verify/[id
   const { transcript: t, fulfillment: f } = draft;
   const blocked = draft.conflicts.length > 0;
   // Home section: pre-filled from the uploaded section lists (Award Lists); the advisor confirms or changes it.
-  const suggestion = await suggestFor(t.registrationId, t.program);
+  const suggestion = await suggestFor(t.registrationId, t.program, t.admission);
   const existing = draft.existingStudentId ? await db.student.findUnique({ where: { id: draft.existingStudentId }, select: { homeSection: true } }) : null;
   const prefill = draft.homeSection ?? suggestion.section ?? existing?.homeSection ?? "";
   const sectionHint = suggestion.section ? suggestion.note : existing?.homeSection ? `Current section: ${existing.homeSection}. ${suggestion.note}` : suggestion.note;

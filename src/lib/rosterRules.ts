@@ -118,3 +118,47 @@ export function suggestHomeSection(entries: RosterEntry[], program: string, acti
   const section = `${m[1]}-${semester}${m[3]}`;
   return { kind: "suggested", section, note: `From the ${latestRows[0].term} section list: ${sections[0]}${elapsed ? ` → ${section} (moved up ${elapsed} semester${elapsed > 1 ? "s" : ""}, same letter)` : ""}. Confirm or change.` };
 }
+
+/**
+ * Programs that run a single section per semester, so the section letter is known without any list.
+ * (CYS has only section A. Add a program here if it also becomes single-section; SE has A/B/C so it is not listed.)
+ */
+export const SINGLE_SECTION_PROGRAMS: Record<string, string> = { CYS: "A" };
+
+/**
+ * For a single-section program the home section follows from the admission term alone:
+ * Fall 2025 admission → Fall 2026 is semester 3 → "CYS-3A". Assumes no frozen terms (the advisor confirms).
+ */
+export function suggestFromAdmission(program: string, admission: string | null | undefined, activeTerm: string): SectionSuggestion {
+  const letter = SINGLE_SECTION_PROGRAMS[program];
+  if (!letter) return { kind: "none", note: `${program} has several sections, so the section can't be worked out from the admission term.` };
+  const a = admission ? termIndex(admission) : null;
+  const now = termIndex(activeTerm);
+  if (a == null || now == null) return { kind: "none", note: "Admission term or current semester unknown." };
+  const semester = Math.round(now - a) + 1;
+  if (semester < 1) return { kind: "none", note: `Admitted ${admission}, after ${activeTerm}.` };
+  if (semester > 8) return { kind: "graduating", note: `Admitted ${admission} — would be semester ${semester}, beyond the 8-semester program, so no section is suggested.` };
+  const section = `${program}-${semester}${letter}`;
+  return { kind: "suggested", section, note: `${program} has a single section (${letter}). Admitted ${admission} → semester ${semester} in ${activeTerm} → ${section}. Confirm or change.` };
+}
+
+/**
+ * For a single-section program, a student on no list follows their batch-mates: if most regular members of the same
+ * admission batch were in CYS-5A last term, this student is too (→ CYS-6A now). This copes with cohorts that run a
+ * semester behind the admission-date arithmetic (e.g. batch 23 sitting in CYS-5A in Spring 2026).
+ * Needs at least 3 batch-mates in the latest list term, and 60% of them in one section.
+ */
+export function suggestFromCohort(cohort: { term: string; sourceSection: string }[], program: string, activeTerm: string, batch: number): SectionSuggestion {
+  if (!SINGLE_SECTION_PROGRAMS[program]) return { kind: "none", note: `${program} has several sections.` };
+  const dated = cohort.filter((c) => termIndex(c.term) != null);
+  if (dated.length < 3) return { kind: "none", note: `Too few batch ${batch} students in the section lists to follow them.` };
+  const latest = Math.max(...dated.map((c) => termIndex(c.term)!));
+  const rows = dated.filter((c) => termIndex(c.term) === latest);
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.sourceSection, (counts.get(r.sourceSection) ?? 0) + 1);
+  const [top, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (rows.length < 3 || n / rows.length < 0.6) return { kind: "none", note: `Batch ${batch} students are spread across several sections in the lists.` };
+  const promoted = suggestHomeSection([{ term: rows[0].term, sourceSection: top, regular: true, program }], program, activeTerm);
+  if (promoted.kind !== "suggested") return promoted;
+  return { kind: "suggested", section: promoted.section, note: `Not on a list, but ${n} of ${rows.length} batch ${batch} students were in ${top} (${rows[0].term}) → ${promoted.section}. Confirm or change.` };
+}
