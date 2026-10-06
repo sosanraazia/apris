@@ -1,4 +1,5 @@
-import { IT_COLUMNS, groupByCba, studentHeaders } from "../exports/byCba";
+import { IT_COLUMNS, buildCbaSheets, studentHeaders } from "../exports/byCba";
+import { loadOfferingLite } from "../exports/offerings";
 import { db } from "../db";
 import type { Session } from "../auth";
 import { courseKey, theoryKeyOf } from "../rules/keys";
@@ -217,10 +218,11 @@ export async function buildExportCsv(session: Session, opts: { markExported: boo
     include: { student: true, versions: { orderBy: { version: "desc" }, take: 1 } },
     orderBy: { student: { registrationId: "asc" } },
   });
-  const { rows: cbaRows, maxStudents } = groupByCba(regs.map((r) => ({ registrationId: r.student.registrationId, items: JSON.parse(r.versions[0].items) as FinalItem[] })));
+  const sheets = buildCbaSheets(await loadOfferingLite(), regs.map((r) => ({ registrationId: r.student.registrationId, items: JSON.parse(r.versions[0].items) as FinalItem[] })), { onlyRegistered: false });
+  const maxStudents = sheets.reduce((m, sh) => Math.max(m, sh.maxStudents), 0);
   const lines = [[...IT_COLUMNS, ...studentHeaders(maxStudents)].map(csvCell).join(",")];
-  for (const r of cbaRows) lines.push([r.cbaCode, r.courseCode, r.section, r.courseName, ...Array.from({ length: maxStudents }, (_, i) => r.students[i] ?? "")].map(csvCell).join(","));
-  const rows = cbaRows.length;
+  for (const sh of sheets) for (const r of sh.rows) lines.push([r.cbaCode, r.courseCode, r.section, r.courseName, ...Array.from({ length: maxStudents }, (_, i) => r.students[i] ?? "")].map(csvCell).join(","));
+  const rows = sheets.reduce((n, sh) => n + sh.rows.filter((r) => r.students.length).length, 0); // rows somebody registered for
   if (opts.markExported && regs.length) {
     await db.registration.updateMany({ where: { id: { in: regs.map((r) => r.id) } }, data: { status: "EXPORTED" } });
     await audit({ userId: session.userId, action: "CSV_EXPORT", reason: `${regs.length} students, ${rows} rows`, after: regs.map((r) => r.student.registrationId) });

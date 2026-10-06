@@ -1,4 +1,6 @@
 import writeXlsxFile from "write-excel-file/node";
+import { db } from "../db";
+import type { OfferingLite } from "./byCba";
 
 export const OFFERING_COLUMNS = ["CBA Code", "Course Code", "Class & Section", "Course Name"] as const;
 export interface OfferingExportRow { sheet: string; cbaCode: string | null; courseCode: string; section: string | null; courseName: string }
@@ -21,4 +23,11 @@ export async function buildOfferingsWorkbook(rows: OfferingExportRow[]): Promise
   }));
   const file = writeXlsxFile(data);
   return Buffer.from(await file.toBuffer());
+}
+
+/** The active semester's current offering rows (including edits made in APRIS). */
+export async function loadOfferingLite(): Promise<OfferingLite[]> {
+  const sem = await db.semester.findFirst({ where: { active: true } });
+  if (!sem) return [];
+  return (await db.offering.findMany({ where: { semesterId: sem.id, active: true } })).map((o) => ({ sheet: o.sheet, cbaCode: o.cbaCode, courseCode: o.courseCode, section: o.section, courseName: o.courseName }));
 }

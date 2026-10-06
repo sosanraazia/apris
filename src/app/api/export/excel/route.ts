@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { buildItWorkbook } from "@/lib/exports/excel";
 import { groupByCba } from "@/lib/exports/byCba";
+import { loadOfferingLite } from "@/lib/exports/offerings";
 import { guardExport, safeName } from "@/lib/exports/guard";
 import { loadSlips } from "@/lib/exports/slips";
 import { audit } from "@/lib/services/audit";
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   const set = await loadSlips(g.session, { scope: g.scope, studentId: g.studentId });
   if (!set || !set.slips.length) return new Response(g.scope === "new" ? "Nothing new or changed since the last Excel export." : "No finalized registrations to export.", { status: 404 });
 
-  const buffer = await buildItWorkbook(set.slips);
+  const buffer = await buildItWorkbook(set.slips, await loadOfferingLite(), { onlyRegistered: !!g.studentId });
   const rows = groupByCba(set.slips).rows.length;
   // a batch hand-over marks the newly finalized registrations as exported; a single-student download does not
   if (!g.studentId) {

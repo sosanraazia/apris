@@ -15,32 +15,53 @@ const slip = (id: string, name: string, items: SlipItem[], extra: Partial<Slip> 
 const a = slip("SE259001", "Test Student One", [item("CS-2007", "Data Structures & Algorithms", "SE-3A", "17343", 3), item("CS-2007L", "Data Structures & Algorithms Lab", "SE-3A", "17347", 1), item("CS-2201", "Computer Networks", "SE-3A", "17350", 3)]);
 const b = slip("SE259002", "Test Student Two", [item("CS-2007", "Data Structures & Algorithms", "SE-3B", "17344", 3), item("CS-2007L", "Data Structures & Algorithms Lab", "SE-3B", "17348", 1)], { homeSection: "SE-3B", version: 2 });
 
+const O = (sheet: string, cba: string | null, code: string, section: string | null, name: string) => ({ sheet, cbaCode: cba, courseCode: code, section, courseName: name });
+const offered = [
+  O("SE-3", "17343", "CS-2007", "SE-3A", "Data Structures & Algorithms"),
+  O("SE-3", "17344", "CS-2007", "SE-3B", "Data Structures & Algorithms"),
+  O("SE-3", "17347", "CS-2007L", "SE-3A", "Data Structures & Algorithms Lab"),
+  O("SE-3", "17348", "CS-2007L", "SE-3B", "Data Structures & Algorithms Lab"),
+  O("SE-3", "17350", "CS-2201", "SE-3A", "Computer Networks"),
+  O("SE-3", "17351", "CS-2201", "SE-3B", "Computer Networks"), // nobody registered
+  O("SE-5", "17400", "SE-3304", "SE-5A", "Devops"), // nobody registered
+];
+
 describe("Excel for IT", () => {
-  it("has one row per CBA code with the students' IDs across the columns", async () => {
+  it("follows the offering workbook: one sheet per class, one row per CBA code, student IDs in the columns after the course name", async () => {
     const c = slip("SE259003", "Test Student Three", [item("CS-2007", "Data Structures & Algorithms", "SE-3A", "17343", 3)]);
-    const [sheet] = await readXlsx(await buildItWorkbook([a, b, c]));
-    expect(sheet.sheet).toBe("Registrations");
+    const sheets = await readXlsx(await buildItWorkbook([a, b, c], offered));
+    expect(sheets.map((s) => s.sheet)).toEqual(["SE-3", "SE-5"]);
+    const se3 = sheets[0].data;
     expect([...IT_COLUMNS]).toEqual(["CBA Code", "Course Code", "Class & Section", "Course Name"]);
-    expect(sheet.data[0]).toEqual(["CBA Code", "Course Code", "Class & Section", "Course Name", "Student 1", "Student 2"]);
-    // 17343 (a, c), 17344 (b), 17347 (a), 17348 (b), 17350 (a): every CBA code once
-    expect(sheet.data.slice(1).map((r) => r[0])).toEqual([17343, 17344, 17347, 17348, 17350]);
-    expect(sheet.data[1]).toEqual([17343, "CS-2007", "SE-3A", "Data Structures & Algorithms", "SE259001", "SE259003"]);
-    expect(sheet.data[2]).toEqual([17344, "CS-2007", "SE-3B", "Data Structures & Algorithms", "SE259002", null]);
+    expect(se3[0]).toEqual(["CBA Code", "Course Code", "Class & Section", "Course Name", "Student 1", "Student 2"]);
+    expect(se3.slice(1).map((r) => r[0])).toEqual([17343, 17344, 17347, 17348, 17350, 17351]); // every offered CBA code once, in order
+    expect(se3[1]).toEqual([17343, "CS-2007", "SE-3A", "Data Structures & Algorithms", "SE259001", "SE259003"]);
+    expect(se3[2]).toEqual([17344, "CS-2007", "SE-3B", "Data Structures & Algorithms", "SE259002", null]);
+    expect(se3[6]).toEqual([17351, "CS-2201", "SE-3B", "Computer Networks", null, null]); // offered, nobody registered
+    expect(sheets[1].data[1]).toEqual([17400, "SE-3304", "SE-5A", "Devops"]);
   });
-  it("a CBA code shared by two course rows stays one row", async () => {
-    const x = slip("SE259001", "X", [item("CS-1", "Theory", "SE-3C", "17349", 3), item("CS-1L", "Lab", "SE-3C", "17349", 1)]);
-    const [sheet] = await readXlsx(await buildItWorkbook([x]));
-    expect(sheet.data).toHaveLength(2);
-    expect(sheet.data[1].slice(0, 4)).toEqual([17349, "CS-1 / CS-1L", "SE-3C", "Theory / Lab"]);
+  it("a single-student download lists only the rows that student registered for", async () => {
+    const sheets = await readXlsx(await buildItWorkbook([b], offered, { onlyRegistered: true }));
+    expect(sheets).toHaveLength(1);
+    expect(sheets[0].data.slice(1).map((r) => [r[0], r[4]])).toEqual([[17344, "SE259002"], [17348, "SE259002"]]);
+  });
+  it("a CBA code the offering list repeats stays one row, and one that is no longer offered goes on its own sheet", async () => {
+    const dup = [O("SE-3", "17349", "CS-1", "SE-3C", "Theory"), O("SE-3", "17349", "CS-1L", "SE-3C", "Lab")];
+    const x = slip("SE259001", "X", [item("CS-1", "Theory", "SE-3C", "17349", 3), item("CS-9", "Gone", "SE-3A", "19999", 3)]);
+    const sheets = await readXlsx(await buildItWorkbook([x], dup));
+    expect(sheets.map((s) => s.sheet)).toEqual(["SE-3", "Not in offering list"]);
+    expect(sheets[0].data).toHaveLength(2);
+    expect(sheets[0].data[1]).toEqual([17349, "CS-1 / CS-1L", "SE-3C", "Theory / Lab", "SE259001"]);
+    expect(sheets[1].data[1]).toEqual([19999, "CS-9", "SE-3A", "Gone", "SE259001"]);
   });
   it("never turns text into a formula and keeps non-numeric CBA codes as text", async () => {
     const evil = slip("SE259003", "X", [item("CS-1", "=HYPERLINK(\"http://evil\",\"x\")", "SE-3A", "ABC1", 3)]);
-    const [sheet] = await readXlsx(await buildItWorkbook([evil]));
+    const [sheet] = await readXlsx(await buildItWorkbook([evil], [], { onlyRegistered: true }));
     expect(sheet.data[1][3]).toBe('=HYPERLINK("http://evil","x")'); // stored as plain text
     expect(sheet.data[1][0]).toBe("ABC1");
   });
   it("an empty set still produces a valid file with just the header", async () => {
-    const [sheet] = await readXlsx(await buildItWorkbook([]));
+    const [sheet] = await readXlsx(await buildItWorkbook([], []));
     expect(sheet.data).toHaveLength(1);
   });
 });
