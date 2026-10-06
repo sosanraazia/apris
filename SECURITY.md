@@ -19,6 +19,10 @@
 - Every state change is written to the audit log (who, what, which student, before/after, reason). Failed logins are logged without ever recording what was typed for unknown usernames.
 - Backups (`/var/backups/apris`) are mode 700 and hold personal data — copy them to approved storage only. Ask IT for **disk encryption** on the VM.
 
+## Section lists
+- Award Lists are read in memory; only **Registration ID, section, term and course code** are stored (no names, no grades) and the PDFs are not kept. Review drafts that hold IDs are deleted after 24 hours or when saved.
+- Uploading and checking lists is Admin-only and audited (`ROSTER_UPLOADED`, `ROSTER_APPLIED`). Suggestions are only suggestions: the advisor must confirm the value when creating the profile.
+
 ## Email
 - SMTP credentials live only in `/etc/apris/apris.env`; they are never stored in the database, shown in the app, written to logs, or included in error messages.
 - Student mail always goes to the institutional address `<RegistrationID>@dsu.edu.pk`; recipients are never taken from user input.

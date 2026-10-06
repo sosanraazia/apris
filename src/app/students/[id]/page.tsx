@@ -12,6 +12,7 @@ import { SetStanding } from "@/components/SetStanding";
 import { SetHomeSection } from "@/components/SetHomeSection";
 import { EditDetails } from "@/components/EditDetails";
 import { AssignAdvisor } from "@/components/AssignAdvisor";
+import { suggestFor } from "@/lib/services/roster";
 import { canEdit, effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 import { recordStudentView } from "@/lib/services/audit";
 import { ArchiveStudent } from "@/components/ArchiveStudent";
@@ -65,7 +66,7 @@ export default async function StudentPage({ params, searchParams }: PageProps<"/
           {s.role !== "HOD" && <Card title="Student details"><EditDetails studentId={id} name={st.name} fatherName={st.fatherName} /></Card>}
           {s.role === "ADMIN" && <Card title="Profile record"><ArchiveStudent studentId={id} archived={!!st.archivedAt} /></Card>}
           {s.role === "ADMIN" && <Card title="Advisor"><AssignAdvisor studentId={id} current={st.advisorId} advisors={(await db.user.findMany({ where: { role: "ADVISOR", active: true }, orderBy: { name: "asc" } })).map((a) => ({ id: a.id, name: a.name }))} /></Card>}
-          {s.role !== "HOD" && <Card title="Home section"><SetHomeSection studentId={id} current={st.homeSection} /></Card>}
+          {s.role !== "HOD" && <Card title="Home section"><SetHomeSection studentId={id} current={st.homeSection} suggested={await (async () => { const g = await suggestFor(st.registrationId, st.program); return g.section ? { section: g.section, note: g.note } : null; })()} /></Card>}
           {s.role === "ADMIN" && <Card title="Academic standing"><SetStanding studentId={id} current={st.standing} /></Card>}
           {s.role !== "HOD" && (
             <Card title="Update profile for a new semester" className="lg:col-span-3">

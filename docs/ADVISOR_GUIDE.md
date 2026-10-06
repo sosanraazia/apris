@@ -69,6 +69,8 @@ Open a student from **Students** (search by Registration ID or name). Tabs:
 ### Home section
 The student's own class section (e.g. `SE-3A`). It tells APRIS which semester the student is in and which section to suggest. Set it on **Overview → Home section**. APRIS does not assume it moves up automatically each semester — **confirm it every semester.** It is *not* the same as the section of an individual course (a student can take a backlog course in another section).
 
+**It is usually filled in for you.** When you upload a new student's documents, APRIS looks the student up in the section lists your Admin loaded (the Award Lists) and pre-fills the home section in green with the reason, e.g. "From the Spring 2026 section list: SE-2A → SE-3A. Confirm or change." **Check it** — it assumes students move up one semester in the same letter. If the student isn't in the lists (for example a PreMed student, or a new admission), the field stays empty and you enter it yourself.
+
 ## 5. Registering a student
 
 Go to the student's **Registration** tab (or use **Register / Add / Drop** in the Students list).

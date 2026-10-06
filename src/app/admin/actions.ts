@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { saveSetting } from "@/lib/settings";
 import { redirect } from "next/navigation";
 import { SemesterError, openRegistrations, openSemester } from "@/lib/services/semesters";
+import { RosterError, applyRosterDraft, buildRosterDraft, loadRosterDraft } from "@/lib/services/roster";
 import { PosError, applyPosDraft, buildPosDraft, loadPosDraft, setPosPublished } from "@/lib/services/pos";
 import { audit } from "@/lib/services/audit";
 import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
@@ -163,4 +164,34 @@ export async function setPosPublishedAction(posId: number, publish: boolean): Pr
   }
   revalidatePath("/admin/pos");
   return { ok: publish ? "Published — it can now be assigned to students." : "Unpublished." };
+}
+
+export async function uploadRosterAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const files = form.getAll("pdfs").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!files.length) return { error: "Choose one or more Award List PDFs." };
+  let id: string;
+  try {
+    const draft = await buildRosterDraft({ createdBy: s.userId, files: await Promise.all(files.map(async (f) => ({ name: f.name, buffer: Buffer.from(await f.arrayBuffer()) }))) });
+    id = draft.id;
+    await audit({ userId: s.userId, action: "ROSTER_UPLOADED", reason: `${files.length} file(s), ${draft.items.filter((i) => !i.problem).length} readable` });
+  } catch (e) {
+    if (e instanceof RosterError) return { error: e.message };
+    throw e;
+  }
+  redirect(`/admin/rosters/review/${id}`);
+}
+
+export async function applyRosterAction(_: { error?: string } | undefined, form: FormData) {
+  const s = await requireRole("ADMIN");
+  const draft = await loadRosterDraft(String(form.get("draftId") ?? ""));
+  if (!draft || draft.createdBy !== s.userId) return { error: "This upload has expired — upload the files again." };
+  try {
+    await applyRosterDraft(draft, s.userId);
+  } catch (e) {
+    if (e instanceof RosterError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/admin/rosters");
+  redirect("/admin/rosters?imported=1");
 }

@@ -47,9 +47,10 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | G-12 | Review the advisor guide and admin runbook against the live screens; correct any drift | Dev | S | Docs match production |
 | G-14 | **SMTP details from IT** (host, port, account allowed to send as no-reply@dsu.edu.pk); set in `/etc/apris/apris.env`; **Admin → Emails → Send test** works; pilot runs with `EMAIL_REDIRECT_TO` set | IT + Dev | S | Test email arrives; redirect removed at go-live |
 | G-15 | **Every advisor has a real, monitored `@dsu.edu.pk` email in Manage users** (student replies are delivered there); advisors know they own the replies; sender address agreed with IT | Admin + IT | S | Every advisor row shows a correct email; a test registration's reply reaches the right advisor |
+| G-16 | **Upload the Award Lists for every section (SE and CYS) for the latest term** and check coverage (Admin → Section lists → Check a student); decide how PreMed / minority / new students get their section | Admin | S | Most pilot students show a suggested section; the rest are known exceptions |
 | G-13 | Clear pilot data before real use (`reset-fresh`, or archive pilot students) | Dev | S | Live system holds real data only |
 
-**Go-live gate:** G-01…G-14 complete, or each remaining item consciously accepted by the HoD.
+**Go-live gate:** G-01…G-16 complete, or each remaining item consciously accepted by the HoD.
 
 ---
 
@@ -78,7 +79,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | R-02 | HoD sign-off workflow for manual (probation/relegation) registrations and overloads (today: listed under Exceptions, no approve/reject step) | Dev | M |
 | R-03 | Backlog from semesters with no offering sheet (workbook has SE-3/5/7 and CYS-3/5/7 only): decide where semester 1/2/4/6/8 offerings come from | Reg + Dev | M |
 | R-04 | Repeat / grade-improvement policy (what happens to a repeated course and CGPA, when a passed course may be retaken) | HoD | M |
-| R-05 | Section-promotion policy (SE-3A → SE-5A) so home section can be suggested automatically | HoD | S |
+| R-05 | **Section promotion rule**: home sections are now pre-filled from the Award Lists assuming "next semester, same letter" (SE-2A → SE-3A). HoD to confirm or give the real rule (e.g. regrouping by CGPA, PreMed tracks) | HoD | S |
 | R-06 | Final-semester and summer credit limits (summer max 8 CH exists in settings but is not applied) | HoD + Dev | M |
 | R-07 | Should overrides of prerequisite / FYP rules by an advisor be allowed at all, or require HoD approval? (today: allowed with a reason, audited) | HoD | S |
 
@@ -174,6 +175,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Deploy from `clean-main`, pull-based, on the university VM (not Vercel) | 2026-09 | |
 | Student emails built after the first release plan (queue + retry + redirect for pilot) | 2026-09 | N-01…N-04 done; delivery tracking (bounces) is a later item |
 | A student's email address is always `<RegistrationID>@dsu.edu.pk` (lowercase, never typed) | 2026-09 | one shared rule, used at creation and by the mail queue |
+| Home section is pre-filled from the departments' Award Lists (regular members only; backlog attendees excluded), moved up one semester with the same letter; the advisor confirms | 2026-10 | stores only Registration ID, section, term; promotion rule is an assumption (R-05); coverage depends on which courses' lists are uploaded |
 | Replies to student emails go to the **advisor who committed the registration**, who is responsible for answering | 2026-09 | Reply-To = that advisor's stored university email; sender is a shared system address (needs IT); advisor email is required when an Admin creates an advisor |
 | **LDAP / Active Directory sign-in will be added in a later version** | 2026-09 | design notes under Phase 8; advisor email will then sync from the directory |
 

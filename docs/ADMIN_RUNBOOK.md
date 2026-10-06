@@ -165,6 +165,23 @@ Every time a registration is **finalized** or **changed** (add/drop), APRIS emai
 
 **Daily during registration:** open *Admin → Emails* and confirm *failed* is 0. **Weekly:** check *retrying* isn't growing.
 
+## A12. Section lists (home-section suggestions)
+
+When an advisor adds a student, the **home section is pre-filled** from the departments' **Award Lists** (the per-section gradebooks, "Award List … Class and Section: BS-SE-2A"). The advisor always sees it, can change it, and confirms by creating the profile.
+
+**Upload:** **Admin → Section lists → Upload Award Lists**. Select several PDFs at once, review, then *Save*. Only each student's **Registration ID, section and term** are kept — names and grades are discarded, and the uploaded PDFs are not stored. Re-uploading a section of the same term replaces its earlier rows. **Do this at the start of every term**, for every section, SE and CYS.
+
+**How a suggestion is worked out**
+1. *Regular member vs backlog attendee.* A student is a *regular member* when their admission batch matches the class — e.g. in Spring 2026 a semester-2 section holds batch **25** (IDs `SE25…`). Students from other batches in that list are *backlog attendees*: the list says nothing about their own home section, so they get **no** suggestion from it.
+2. *Moving up.* The suggestion is the **same letter, advanced by the number of semesters since the list**: Spring 2026 `SE-2A` → Fall 2026 `SE-3A`; a year-old list advances two semesters. **This promotion rule is an assumption** (it matches the Fall 2026 offering, which has SE-3 A/B/C, SE-5 A/B, SE-7 A/B for SE-2 A/B/C, SE-4 A/B, SE-6 A/B). If the department reshuffles sections, the advisor corrects it on screen.
+3. *Final semester.* A regular member of semester 8 gets no suggestion (no next section).
+4. *Conflicts.* A student who is a regular member of two sections in the same term gets no suggestion.
+5. The suggestion is flagged if that section has no offerings in the active semester.
+
+**Check a student:** *Section lists → Check a student* shows what the lists say and what would be suggested.
+
+**Coverage — read this.** Award Lists are **per course**, so a student only appears if they took that course that term. Students who took none of the uploaded courses (for example **PreMed / minority students on a different course sequence**, new intake, or transferred students) will show "not found" and need the section entered by hand. Upload lists for **more courses** (or the official class lists) to widen coverage. Roughly 96% of listed students had a derivable section in the first test (410 students, 9 lists).
+
 ---
 
 # Part B — Server operations (IT / sysadmin)

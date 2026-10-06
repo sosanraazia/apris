@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { loadDraft } from "@/lib/services/ingest";
+import { suggestFor } from "@/lib/services/roster";
 import { Badge, Card, Notice, td, th } from "@/components/ui";
 import { ConfirmProfileForm } from "@/components/ConfirmProfileForm";
 
@@ -10,6 +12,11 @@ export default async function Verify({ params }: PageProps<"/students/verify/[id
   if (!draft || (draft.createdBy !== sess.userId && sess.role !== "ADMIN")) return <Notice tone="red">This upload was not found or has expired. <Link className="underline" href="/students/new">Start again</Link>.</Notice>;
   const { transcript: t, fulfillment: f } = draft;
   const blocked = draft.conflicts.length > 0;
+  // Home section: pre-filled from the uploaded section lists (Award Lists); the advisor confirms or changes it.
+  const suggestion = await suggestFor(t.registrationId, t.program);
+  const existing = draft.existingStudentId ? await db.student.findUnique({ where: { id: draft.existingStudentId }, select: { homeSection: true } }) : null;
+  const prefill = draft.homeSection ?? suggestion.section ?? existing?.homeSection ?? "";
+  const sectionHint = suggestion.section ? suggestion.note : existing?.homeSection ? `Current section: ${existing.homeSection}. ${suggestion.note}` : suggestion.note;
   const rows: [string, string][] = [
     ["Registration ID", t.registrationId],
     ["Institutional email", `${t.registrationId.toLowerCase()}@dsu.edu.pk`],
@@ -44,7 +51,7 @@ export default async function Verify({ params }: PageProps<"/students/verify/[id
         </Card>
       </div>
       <Card title={draft.existingStudentId ? "Confirm — update existing profile" : "Confirm"}>
-        <ConfirmProfileForm draftId={draft.id} name={t.name} fatherName={t.fatherName} homeSection={draft.homeSection ?? ""} blocked={blocked} isUpdate={!!draft.existingStudentId} />
+        <ConfirmProfileForm draftId={draft.id} name={t.name} fatherName={t.fatherName} homeSection={prefill} hint={sectionHint} suggested={!!suggestion.section} blocked={blocked} isUpdate={!!draft.existingStudentId} />
       </Card>
     </div>
   );

@@ -212,3 +212,21 @@ model Notification {
   @@index([status, nextAttemptAt])
   @@index([studentId])
 }
+
+/// Known class sections per student, extracted from the departments' Award Lists (gradebooks). Holds only what is needed to
+/// suggest a home section: no names, no grades. `regular` = the student's batch matches the section's semester
+/// (false = a backlog attendee from another batch, so it says nothing about their own home section).
+model SectionRoster {
+  id             Int      @id @default(autoincrement())
+  registrationId String
+  program        String // SE | CYS
+  term           String // "Spring 2026"
+  sourceSection  String // "SE-2A"
+  regular        Boolean
+  courseCode     String?
+  uploadedById   Int?
+  uploadedAt     DateTime @default(now())
+
+  @@unique([registrationId, term, sourceSection])
+  @@index([registrationId])
+}
