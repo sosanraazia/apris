@@ -64,7 +64,15 @@ export default async function Admin({ searchParams }: PageProps<"/admin">) {
       )}
       <Card title="Academic rule settings"><SettingsForm values={settings} /></Card>
       {applied && <Notice tone="green">Course offerings updated.</Notice>}
-      <Card title={`Upload course offerings${sem ? " — " + sem.name : ""}`}><OfferingUploadForm /></Card>
+      <Card title={`Upload course offerings${sem ? " — " + sem.name : ""}`}>
+        <OfferingUploadForm />
+        {ready.offeringCount > 0 && (
+          <form method="post" action="/api/export/offerings" className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+            <button className={btnGhost}>⬇ Download current course offerings (.xlsx)</button>
+            <span className="text-xs text-slate-500">Everything as it is in APRIS now, including CBA codes and sections edited here. One sheet per class, same columns as the upload, so it can be uploaded again.</span>
+          </form>
+        )}
+      </Card>
       <Card title={`Offering rows needing attention — ${sem?.name ?? ""} (${bad.length})`}>
         <p className="mb-3 text-sm text-slate-600">Rows without a CBA code or section can be recommended but can&apos;t be exported. Enter the values from the source ERP; duplicates are re-checked after each save.</p>
         <div className="-mx-5 overflow-x-auto"><table className="w-full"><thead><tr><th className={th}>Sheet</th><th className={th}>Code</th><th className={th}>Course</th><th className={th} colSpan={3}>Fix</th></tr></thead><tbody className="divide-y divide-slate-100">{bad.map((o) => <Row key={o.id} o={o} />)}{!bad.length && <tr><td className={`${td} py-6 text-center text-emerald-700`} colSpan={6}>All offering rows are export-ready.</td></tr>}</tbody></table></div>

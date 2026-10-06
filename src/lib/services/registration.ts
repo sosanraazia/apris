@@ -1,3 +1,4 @@
+import { IT_COLUMNS, groupByCba, studentHeaders } from "../exports/byCba";
 import { db } from "../db";
 import type { Session } from "../auth";
 import { courseKey, theoryKeyOf } from "../rules/keys";
@@ -207,7 +208,7 @@ const csvCell = (raw: string) => {
   return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 };
 
-/** One row per student-course enrollment; the student's Registration ID repeats on every row (locked PRD requirement). */
+/** One row per CBA code, the registered students' Registration IDs across the columns (same layout as the Excel for IT). */
 export async function buildExportCsv(session: Session, opts: { markExported: boolean }) {
   const sem = await db.semester.findFirst({ where: { active: true } });
   if (!sem) throw new RegistrationError("No active semester");
@@ -216,14 +217,10 @@ export async function buildExportCsv(session: Session, opts: { markExported: boo
     include: { student: true, versions: { orderBy: { version: "desc" }, take: 1 } },
     orderBy: { student: { registrationId: "asc" } },
   });
-  const lines = ["Student Registration ID,CBA Code,Course Code,Class & Section,Course Name"];
-  let rows = 0;
-  for (const r of regs) {
-    for (const i of JSON.parse(r.versions[0].items) as FinalItem[]) {
-      lines.push([r.student.registrationId, i.cbaCode, i.courseCode, i.section, i.courseName].map(csvCell).join(","));
-      rows++;
-    }
-  }
+  const { rows: cbaRows, maxStudents } = groupByCba(regs.map((r) => ({ registrationId: r.student.registrationId, items: JSON.parse(r.versions[0].items) as FinalItem[] })));
+  const lines = [[...IT_COLUMNS, ...studentHeaders(maxStudents)].map(csvCell).join(",")];
+  for (const r of cbaRows) lines.push([r.cbaCode, r.courseCode, r.section, r.courseName, ...Array.from({ length: maxStudents }, (_, i) => r.students[i] ?? "")].map(csvCell).join(","));
+  const rows = cbaRows.length;
   if (opts.markExported && regs.length) {
     await db.registration.updateMany({ where: { id: { in: regs.map((r) => r.id) } }, data: { status: "EXPORTED" } });
     await audit({ userId: session.userId, action: "CSV_EXPORT", reason: `${regs.length} students, ${rows} rows`, after: regs.map((r) => r.student.registrationId) });

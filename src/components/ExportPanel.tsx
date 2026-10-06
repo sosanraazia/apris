@@ -2,7 +2,7 @@ import { btn, btnGhost } from "./ui";
 
 /**
  * The two hand-over downloads. Plain HTML form posts (no JavaScript needed) so the browser saves the file directly.
- * Excel = the agreed IT format (one row per student-course). PDF = one page per student with courses and sections.
+ * Excel = the agreed IT format (one row per CBA code, the students' IDs across the columns). PDF = one page per student with courses and sections.
  */
 export function ExportPanel({ studentId, counts }: { studentId?: number; counts?: { all: number; fresh: number } }) {
   return (

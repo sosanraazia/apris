@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { buildItWorkbook } from "@/lib/exports/excel";
+import { groupByCba } from "@/lib/exports/byCba";
 import { guardExport, safeName } from "@/lib/exports/guard";
 import { loadSlips } from "@/lib/exports/slips";
 import { audit } from "@/lib/services/audit";
@@ -12,13 +13,13 @@ export async function POST(req: Request) {
   if (!set || !set.slips.length) return new Response(g.scope === "new" ? "Nothing new or changed since the last Excel export." : "No finalized registrations to export.", { status: 404 });
 
   const buffer = await buildItWorkbook(set.slips);
-  const rows = set.slips.reduce((a, s) => a + s.items.length, 0);
+  const rows = groupByCba(set.slips).rows.length;
   // a batch hand-over marks the newly finalized registrations as exported; a single-student download does not
   if (!g.studentId) {
     const ids = set.registrationIds.filter((r) => r.status === "FINALIZED").map((r) => r.id);
     if (ids.length) await db.registration.updateMany({ where: { id: { in: ids } }, data: { status: "EXPORTED" } });
   }
-  await audit({ userId: g.session.userId, action: "EXPORT_EXCEL", studentRegId: g.studentId ? set.slips[0].registrationId : null, reason: `${set.slips.length} student(s), ${rows} rows${g.studentId ? "" : `, scope ${g.scope}`}` });
+  await audit({ userId: g.session.userId, action: "EXPORT_EXCEL", studentRegId: g.studentId ? set.slips[0].registrationId : null, reason: `${set.slips.length} student(s), ${rows} CBA row(s)${g.studentId ? "" : `, scope ${g.scope}`}` });
   const name = g.studentId ? `registration-${set.slips[0].registrationId}.xlsx` : `registrations-${safeName(set.semester)}-for-IT.xlsx`;
   return new Response(new Uint8Array(buffer), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 }

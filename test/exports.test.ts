@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import readXlsx from "read-excel-file/node";
 import { buildItWorkbook, IT_COLUMNS } from "../src/lib/exports/excel";
+import { OFFERING_COLUMNS, buildOfferingsWorkbook } from "../src/lib/exports/offerings";
 import { buildSlipsPdf, pdfSafe } from "../src/lib/exports/pdf";
 import type { Slip, SlipItem } from "../src/lib/exports/slips";
 import { pdfPages } from "../src/lib/parsers/pdfText";
@@ -15,25 +16,46 @@ const a = slip("SE259001", "Test Student One", [item("CS-2007", "Data Structures
 const b = slip("SE259002", "Test Student Two", [item("CS-2007", "Data Structures & Algorithms", "SE-3B", "17344", 3), item("CS-2007L", "Data Structures & Algorithms Lab", "SE-3B", "17348", 1)], { homeSection: "SE-3B", version: 2 });
 
 describe("Excel for IT", () => {
-  it("has exactly the agreed columns and one row per student-course, ID repeated on every row", async () => {
-    const [sheet] = await readXlsx(await buildItWorkbook([a, b]));
+  it("has one row per CBA code with the students' IDs across the columns", async () => {
+    const c = slip("SE259003", "Test Student Three", [item("CS-2007", "Data Structures & Algorithms", "SE-3A", "17343", 3)]);
+    const [sheet] = await readXlsx(await buildItWorkbook([a, b, c]));
     expect(sheet.sheet).toBe("Registrations");
-    expect(sheet.data[0]).toEqual([...IT_COLUMNS]);
-    expect(IT_COLUMNS).toEqual(["Student Registration ID", "CBA Code", "Course Code", "Class & Section", "Course Name"]);
-    expect(sheet.data).toHaveLength(1 + 3 + 2);
-    expect(sheet.data[1]).toEqual(["SE259001", 17343, "CS-2007", "SE-3A", "Data Structures & Algorithms"]);
-    expect(sheet.data.slice(1).map((r) => r[0])).toEqual(["SE259001", "SE259001", "SE259001", "SE259002", "SE259002"]);
-    expect(sheet.data[5]).toEqual(["SE259002", 17348, "CS-2007L", "SE-3B", "Data Structures & Algorithms Lab"]);
+    expect([...IT_COLUMNS]).toEqual(["CBA Code", "Course Code", "Class & Section", "Course Name"]);
+    expect(sheet.data[0]).toEqual(["CBA Code", "Course Code", "Class & Section", "Course Name", "Student 1", "Student 2"]);
+    // 17343 (a, c), 17344 (b), 17347 (a), 17348 (b), 17350 (a): every CBA code once
+    expect(sheet.data.slice(1).map((r) => r[0])).toEqual([17343, 17344, 17347, 17348, 17350]);
+    expect(sheet.data[1]).toEqual([17343, "CS-2007", "SE-3A", "Data Structures & Algorithms", "SE259001", "SE259003"]);
+    expect(sheet.data[2]).toEqual([17344, "CS-2007", "SE-3B", "Data Structures & Algorithms", "SE259002", null]);
+  });
+  it("a CBA code shared by two course rows stays one row", async () => {
+    const x = slip("SE259001", "X", [item("CS-1", "Theory", "SE-3C", "17349", 3), item("CS-1L", "Lab", "SE-3C", "17349", 1)]);
+    const [sheet] = await readXlsx(await buildItWorkbook([x]));
+    expect(sheet.data).toHaveLength(2);
+    expect(sheet.data[1].slice(0, 4)).toEqual([17349, "CS-1 / CS-1L", "SE-3C", "Theory / Lab"]);
   });
   it("never turns text into a formula and keeps non-numeric CBA codes as text", async () => {
     const evil = slip("SE259003", "X", [item("CS-1", "=HYPERLINK(\"http://evil\",\"x\")", "SE-3A", "ABC1", 3)]);
     const [sheet] = await readXlsx(await buildItWorkbook([evil]));
-    expect(sheet.data[1][4]).toBe('=HYPERLINK("http://evil","x")'); // stored as plain text
-    expect(sheet.data[1][1]).toBe("ABC1");
+    expect(sheet.data[1][3]).toBe('=HYPERLINK("http://evil","x")'); // stored as plain text
+    expect(sheet.data[1][0]).toBe("ABC1");
   });
   it("an empty set still produces a valid file with just the header", async () => {
     const [sheet] = await readXlsx(await buildItWorkbook([]));
     expect(sheet.data).toHaveLength(1);
+  });
+});
+
+describe("offerings download", () => {
+  it("writes one sheet per class with the upload's columns", async () => {
+    const sheets = await readXlsx(await buildOfferingsWorkbook([
+      { sheet: "SE-5", cbaCode: "17400", courseCode: "SE-3304", section: "SE-5A", courseName: "Devops" },
+      { sheet: "SE-3", cbaCode: "17343", courseCode: "CS-2007", section: "SE-3A", courseName: "Data Structures & Algorithms" },
+      { sheet: "SE-3", cbaCode: null, courseCode: "CS-2201", section: null, courseName: "Computer Networks" },
+    ]));
+    expect(sheets.map((s) => s.sheet)).toEqual(["SE-3", "SE-5"]);
+    expect(sheets[0].data[0]).toEqual([...OFFERING_COLUMNS]);
+    expect(sheets[0].data).toHaveLength(3);
+    expect(sheets[1].data[1]).toEqual([17400, "SE-3304", "SE-5A", "Devops"]);
   });
 });
 

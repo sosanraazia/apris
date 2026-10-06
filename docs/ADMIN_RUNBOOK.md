@@ -102,7 +102,8 @@ A late change after closing is possible only by an Admin, needs a reason, and is
    - A **blank cell never erases** a CBA code you typed in by hand.
    - Rows the file no longer contains are **switched off, not deleted,** if any registration uses them.
    - If a change affects a course students are already registered in, the review page says so. Finalized registrations keep the CBA/section they were exported with; correct them through Add/Drop.
-4. **Fix incomplete rows** under **Offering rows needing attention**: enter the section and CBA code from the source system and press *Save*. Duplicates are re-checked after every save. **A course whose offering lacks a CBA code or section cannot be finalized or exported** — this list should be empty before registrations open.
+4. **Download current offerings** (Admin page, under the upload form) gives the offering sheet exactly as APRIS holds it now — including CBA codes and sections you edited here — one sheet per class, same columns as the upload, so it can be uploaded again (audited as `EXPORT_OFFERINGS`).
+5. **Fix incomplete rows** under **Offering rows needing attention**: enter the section and CBA code from the source system and press *Save*. Duplicates are re-checked after every save. **A course whose offering lacks a CBA code or section cannot be finalized or exported** — this list should be empty before registrations open.
 
 ## A7. Students (Admin actions)
 
@@ -114,7 +115,7 @@ Open a student, **Overview**:
 ## A8. Exports (Excel for IT, combined PDF, CSV)
 
 **Dashboard → Files for IT and for checking** (Admin and HoD see everyone; advisors see their own students). Choose which registrations, then:
-- **Excel for IT (.xlsx)** — the agreed format, one row per student-course: `Student Registration ID, CBA Code, Course Code, Class & Section, Course Name` (the ID repeats on every row; CBA codes are numbers; text is never interpreted as a formula). A **batch** download marks newly finalized registrations as **Exported** and is audited (`EXPORT_EXCEL`).
+- **Excel for IT (.xlsx)** — the agreed format, **one row per CBA code**: `CBA Code, Course Code, Class & Section, Course Name, Student 1, Student 2, …` — each *Student n* cell holds a registered student's Registration ID (as many columns as the busiest course needs; CBA codes are numbers; text is never interpreted as a formula). A CBA code shared by two course rows is still one row. A **batch** download marks newly finalized registrations as **Exported** and is audited (`EXPORT_EXCEL`). The CSV button gives the same layout.
 - **Combined PDF** — one page per student: name, ID, program, home section, advisor, version, courses with section / CBA / credit hours, total. For checking before and after the hand-over. Does not change any status (`EXPORT_PDF`).
 - **CSV** — the same rows as the Excel file, kept for compatibility.
 - **Which registrations:** *New or changed since the last Excel export* (default) or *All finalized registrations*. A change made later in add/drop makes that student "changed" again. The same two files are available per student on the student's Registration tab; those do not mark anything as exported.
