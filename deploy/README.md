@@ -84,6 +84,13 @@ In GitHub → Settings → Branches, require a pull request and the CI check on 
 
 ## Moving existing registrations to the VM (not through git)
 
+**Shortest way — one command from your laptop** (needs SSH access to the VM and `sudo` there; the VM's deployed release already contains the import script):
+
+```bash
+bash deploy/data-push.sh <your-user>@<vm-address>
+```
+It exports, copies, imports and deletes the temporary files on both sides. You type the passphrase twice (here and on the VM) and `REPLACE` to confirm. Afterwards the team works on the VM: the VM's copy becomes the only live one, so stop using your local database for real work. The step-by-step version of the same thing:
+
 Registrations, student records, uploaded transcripts and the audit trail are **data, not code**: they stay out of git (the repository history is permanent and every collaborator and the VM's deploy key can read it). Instead, hand them over as one encrypted file:
 
 ```bash
