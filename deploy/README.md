@@ -40,9 +40,9 @@ The repository is **private**, so the VM cannot clone it over plain HTTPS. The V
    ```
 3. When it prints `Add this public key as a READ-ONLY deploy key…` and shows a line starting with `ssh-ed25519`, **copy that whole line** and add it in GitHub (you need to be an admin of the repo):
    *GitHub → `sosanraazia/apris` → Settings → Deploy keys → Add deploy key* → title `apris-vm`, paste the key, **leave "Allow write access" unticked**, Add key. Then go back to the VM terminal and press Enter. The script checks the key works before it continues.
-4. If you ever need to see the key again: `sudo cat /var/lib/apris/.ssh/id_ed25519.pub` (the private half, `id_ed25519`, never leaves the VM and must never be copied or committed).
+4. If you ever need to see the key again: `sudo cat /opt/apris/.ssh/id_ed25519.pub` (the private half, `id_ed25519`, never leaves the VM and must never be copied or committed).
 
-**Rotating or revoking the key:** delete it under Settings → Deploy keys (the VM stops being able to pull immediately), then on the VM run `sudo -u apris rm /var/lib/apris/.ssh/id_ed25519*` and re-run `install.sh` to generate and register a new one. Do this if the VM is rebuilt, replaced or suspected of compromise. One deploy key can only be attached to one repository, which is what we want here.
+**Rotating or revoking the key:** delete it under Settings → Deploy keys (the VM stops being able to pull immediately), then on the VM run `sudo -u apris rm /opt/apris/.ssh/id_ed25519*` and re-run `install.sh` to generate and register a new one. Do this if the VM is rebuilt, replaced or suspected of compromise. One deploy key can only be attached to one repository, which is what we want here.
 
 Network: the VM needs outbound SSH (22) to `github.com`, or port 443 via `ssh.github.com` (ask IT; see the firewall list above).
 
