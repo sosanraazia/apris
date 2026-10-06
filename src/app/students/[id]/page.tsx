@@ -9,6 +9,7 @@ import { Badge, Card, Notice, td, th } from "@/components/ui";
 import { UploadForm } from "@/components/UploadForm";
 import { RegistrationEditor } from "@/components/RegistrationEditor";
 import { SetStanding } from "@/components/SetStanding";
+import { ExportPanel } from "@/components/ExportPanel";
 import { SetHomeSection } from "@/components/SetHomeSection";
 import { EditDetails } from "@/components/EditDetails";
 import { AssignAdvisor } from "@/components/AssignAdvisor";
@@ -179,6 +180,9 @@ async function RegistrationTab({ studentId, role, ctx }: { studentId: number; ro
         limits={ctx.rec.load}
         warnings={ctx.rec.warnings}
       />
+      {reg && reg.versions.length > 0 && (
+        <Card title="Files for this student"><p className="mb-3 text-sm text-slate-600">The committed registration (version {reg.version}) with courses and sections.</p><ExportPanel studentId={studentId} /></Card>
+      )}
       {reg && reg.versions.length > 0 && (
         <Card title="Registration versions">
           <ul className="space-y-3 text-sm">{reg.versions.map((v) => {

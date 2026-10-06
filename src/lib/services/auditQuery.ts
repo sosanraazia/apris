@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 export const ACTION_GROUPS: Record<string, { label: string; match: (a: string) => boolean }> = {
-  enrollment: { label: "Enrollment (registrations, exports)", match: (a) => a.startsWith("REGISTRATION_") || a === "CSV_EXPORT" || a.startsWith("NOTIFICATION_") },
+  enrollment: { label: "Enrollment (registrations, exports)", match: (a) => a.startsWith("REGISTRATION_") || a === "CSV_EXPORT" || a.startsWith("NOTIFICATION_") || a.startsWith("EXPORT_") },
   records: { label: "Student records", match: (a) => /^(STUDENT_(CREATED|ARCHIVED|RESTORED|DETAILS_EDITED)|SNAPSHOT_CREATED|DOCUMENTS_UPLOADED|HOME_SECTION_SET|ADVISOR_ASSIGNED|STANDING_CHANGED)$/.test(a) },
   access: { label: "Access (logins, views)", match: (a) => /^(LOGIN|LOGIN_FAILED|LOGOUT|DOCUMENT_VIEWED|STUDENT_VIEWED)$/.test(a) },
   admin: { label: "Administration", match: (a) => /^(SETTINGS_CHANGED|USER_|PASSWORD_|SEMESTER_|OFFERING|AUDIT_|POS_|PREREQUISITES_|EMAIL_|ROSTER_)/.test(a) },
@@ -33,7 +33,7 @@ export function parseFilter(sp: Record<string, string | string[] | undefined>): 
 
 /** Group filters are applied in the query via an IN list of known action names. */
 export const KNOWN_ACTIONS = [
-  "REGISTRATION_DRAFT_SAVED", "REGISTRATION_FINALIZED", "REGISTRATION_ADD_DROP", "REGISTRATION_LATE_CHANGE", "CSV_EXPORT",
+  "REGISTRATION_DRAFT_SAVED", "REGISTRATION_FINALIZED", "REGISTRATION_ADD_DROP", "REGISTRATION_LATE_CHANGE", "CSV_EXPORT", "EXPORT_EXCEL", "EXPORT_PDF",
   "STUDENT_CREATED", "STUDENT_ARCHIVED", "STUDENT_RESTORED", "STUDENT_DETAILS_EDITED", "SNAPSHOT_CREATED", "DOCUMENTS_UPLOADED", "HOME_SECTION_SET", "ADVISOR_ASSIGNED", "STANDING_CHANGED",
   "LOGIN", "LOGIN_FAILED", "LOGOUT", "DOCUMENT_VIEWED", "STUDENT_VIEWED",
   "SETTINGS_CHANGED", "USER_CREATED", "USER_ROLE_CHANGED", "USER_EMAIL_CHANGED", "USER_DEACTIVATED", "USER_ACTIVATED", "PASSWORD_RESET", "PASSWORD_CHANGED",

@@ -21,7 +21,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | Probation / relegation — manual with approval reference | ✅ Done (automation later) |
 | Audit log (chained, filterable, per-advisor activity), archive-not-delete | ✅ Done |
 | Users / roles / password change, login throttling, security headers | ✅ Done |
-| Row-per-course CSV export | ✅ Done |
+| Row-per-course export: Excel (.xlsx) for IT, one-page-per-student combined PDF, CSV | ✅ Done |
 | Deploy from GitHub with rollback, backups, docs, advisor guide, admin runbook | ✅ Written — **never run on a real VM** |
 | Real-student pilot | ⬜ Not started |
 | Student emails (queue, retry, outbox, redirect for pilot) | ✅ Done — needs SMTP details from IT (G-14) |

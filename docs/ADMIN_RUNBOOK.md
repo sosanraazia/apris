@@ -111,13 +111,15 @@ Open a student, **Overview**:
 - **Advisor** — assign or change.
 - **Profile record → Archive** — for a profile created by mistake (e.g. duplicate). Needs a reason, hides the profile from lists and advisors, and is reversible (**Students → Show archived → Restore**). Profiles with **finalized registrations can't be archived** — set their standing to Withdrawn/Inactive instead. Nothing is ever deleted.
 
-## A8. Exports
+## A8. Exports (Excel for IT, combined PDF, CSV)
 
-Dashboard → **Download registration CSV** (also available to HoD). One row per student-course:
+**Dashboard → Files for IT and for checking** (Admin and HoD see everyone; advisors see their own students). Choose which registrations, then:
+- **Excel for IT (.xlsx)** — the agreed format, one row per student-course: `Student Registration ID, CBA Code, Course Code, Class & Section, Course Name` (the ID repeats on every row; CBA codes are numbers; text is never interpreted as a formula). A **batch** download marks newly finalized registrations as **Exported** and is audited (`EXPORT_EXCEL`).
+- **Combined PDF** — one page per student: name, ID, program, home section, advisor, version, courses with section / CBA / credit hours, total. For checking before and after the hand-over. Does not change any status (`EXPORT_PDF`).
+- **CSV** — the same rows as the Excel file, kept for compatibility.
+- **Which registrations:** *New or changed since the last Excel export* (default) or *All finalized registrations*. A change made later in add/drop makes that student "changed" again. The same two files are available per student on the student's Registration tab; those do not mark anything as exported.
 
-`Student Registration ID, CBA Code, Course Code, Class & Section, Course Name`
-
-A student in six courses appears in six rows. Downloading marks those registrations **Exported** and is audited. Later changes make a new version — export again to get the current state. Open the CSV in a spreadsheet only to read it; never paste it into shared chats.
+Both files use each student's **committed** version, so unsaved drafts never appear. A student in six courses appears in six Excel rows. Later changes make a new version — download again (choose *new or changed*) to hand over only the difference. These files hold student data: send them to IT through the agreed channel only, never paste them into shared chats, and delete downloaded copies when finished.
 
 ## A9. Probation and relegation (manual, for now)
 

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { Card, Stat, btn, Notice } from "@/components/ui";
+import { ExportPanel } from "@/components/ExportPanel";
 import { effectivePhase, PHASE_LABEL } from "@/lib/services/phase";
 
 export default async function Dashboard({ searchParams }: PageProps<"/">) {
@@ -47,10 +48,13 @@ export default async function Dashboard({ searchParams }: PageProps<"/">) {
         {s.role !== "ADVISOR" && <Stat label="Offering rows needing fixes" value={unknownIssues} tone={unknownIssues ? "amber" : undefined} href={s.role === "ADMIN" ? "/admin" : undefined} />}
       </div>
 
-      {s.role !== "HOD" && finalized > 0 && (
-        <Card title="Export">
-          <p className="mb-3 text-sm text-slate-600">{finalized} finalized registration(s) are ready. The CSV has one row per student-course enrollment.</p>
-          <form method="post" action="/api/export"><button className={btn}>Download registration CSV</button></form>
+      {finalized > 0 && (
+        <Card title="Files for IT and for checking">
+          <p className="mb-3 text-sm text-slate-600">
+            <b>Excel for IT</b> — the agreed format: one row per student-course (Student Registration ID, CBA Code, Course Code, Class &amp; Section, Course Name). Downloading it marks new registrations as handed over.{" "}
+            <b>Combined PDF</b> — one page per student with their courses and sections, to check before and after the hand-over. {s.role === "ADVISOR" ? "Includes your students only." : ""}
+          </p>
+          <ExportPanel counts={{ all: finalized, fresh: students.filter((x) => status(x) === "FINALIZED").length }} />
         </Card>
       )}
     </div>

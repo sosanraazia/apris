@@ -105,6 +105,12 @@ If you forget one, the message tells you exactly which course needs it.
 ### Approving (finalizing)
 Approving creates **Version 1** of the registration and puts it in the export file. It is refused if a chosen course's offering is missing its **CBA code or section** — that is a data problem for the Admin, who can fix it; you'll see a red note on that row.
 
+### Files after registering: Excel for IT and the PDF slips
+Once registrations are finalized, two buttons appear on your **dashboard** (and per student on the **Registration** tab, under *Files for this student*):
+- **Excel for IT (.xlsx)** — the agreed hand-over format: one row per student-course with *Student Registration ID, CBA Code, Course Code, Class & Section, Course Name*. Send it to IT as you do now. Downloading the batch marks those registrations as **handed over**, so next time choose **"New or changed since the last Excel export"** to send only what is new (a registration you change later in add/drop shows up as "changed" again).
+- **Combined PDF** — **one page per student** with their courses, sections, CBA codes and total credit hours. Use it to **check each student's sections before and after the hand-over** (and as a printable slip). It never changes anything.
+Advisors get their own students only. A student's single-student downloads do not mark anything as handed over.
+
 ### What the student receives
 When you finalize (and whenever you later commit an add/drop or change), APRIS emails the student at `<RegistrationID>@dsu.edu.pk`: their courses, sections, CBA codes, total credit hours and — for changes — what was added, removed or moved. You don't send anything yourself. See the **Emails** tab on the student for what was sent and its status. If an email fails the registration is still valid; tell your Admin and they can retry it.
 
