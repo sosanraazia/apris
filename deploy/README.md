@@ -81,3 +81,24 @@ In GitHub → Settings → Branches, require a pull request and the CI check on 
 - Real student PDFs are never committed (`data/sample/`, `storage/` are git-ignored). Keep it that way.
 - The install script downloads Node from NodeSource and pipes it to bash; if IT prefers, install Node 22 by their own method first — the script skips it when Node ≥ 22 is present.
 - **Not tested on a real VM yet.** The scripts pass a syntax check but have never run on Ubuntu; do the first install with IT's help and expect to adjust.
+
+## Moving existing registrations to the VM (not through git)
+
+Registrations, student records, uploaded transcripts and the audit trail are **data, not code**: they stay out of git (the repository history is permanent and every collaborator and the VM's deploy key can read it). Instead, hand them over as one encrypted file:
+
+```bash
+# 1. On the developer machine (in the apris folder). Asks for a passphrase; choose a long one.
+bash deploy/data-export.sh                                   # writes ~/apris-data-YYYY-MM-DD.tar.enc
+
+# 2. Copy the file to the VM, and give IT the passphrase by a DIFFERENT channel (phone, in person):
+scp ~/apris-data-*.tar.enc <user>@<vm>:/tmp/
+
+# 3. On the VM (the deploy folder from the first install):
+sudo bash /tmp/apris-deploy/data-import.sh /tmp/apris-data-YYYY-MM-DD.tar.enc
+#    type REPLACE to confirm; the current database is backed up first, the schema is brought up to date, the app restarts.
+
+# 4. Afterwards: delete the file on both machines, and reset or disable the dev accounts that came with the data:
+shred -u /tmp/apris-data-*.tar.enc 2>/dev/null || rm -f /tmp/apris-data-*.tar.enc
+```
+
+Use this once for a go-live hand-over of real data. For test or pilot data prefer to **clear it** (`scripts/reset-fresh.ts --yes` wipes students and audit, keeps reference data) and let advisors register for real on the VM. After go-live the VM's own nightly backups (`/var/backups/apris`) are the copy of record; never push production data back to a laptop without need.

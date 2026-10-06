@@ -44,3 +44,10 @@ data/sample/
 prisma/dev.db*
 !.env.example
 .dev-credentials.txt
+
+# data hand-over bundles (student records, encrypted) — never commit
+*.tar.enc
+apris-data-*
+*.db
+*.db-wal
+*.db-shm
