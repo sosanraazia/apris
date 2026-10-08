@@ -29,7 +29,7 @@ npm run dev                     # http://localhost:3000
 
 (`npm run db:reset` wipes and rebuilds an existing development database; never run it on real data.)
 
-Read `docs/SESSION_HANDOFF.md` first: what is built, decisions made, what is open. **Student data is never in git** (`prisma/dev.db`, `storage/`, `data/sample/`): on a new machine you start with an empty student list and add students by uploading their PDFs; the Award Lists (Admin → Section lists) are uploaded again from the departments' files.
+Backups and moving local data to the live server: `docs/BACKUP_AND_DATA_TRANSFER.md`. Read `docs/SESSION_HANDOFF.md` first: what is built, decisions made, what is open. **Student data is never in git** (`prisma/dev.db`, `storage/`, `data/sample/`): on a new machine you start with an empty student list and add students by uploading their PDFs; the Award Lists (Admin → Section lists) are uploaded again from the departments' files.
 
 `npm run seed` creates the dev accounts `admin`, `hod` and `advisor` with **random passwords written to `.dev-credentials.txt`** (git-ignored, mode 600); `npm run dev:credentials` issues new ones. No passwords are stored in the source. Set a real `SESSION_SECRET` in `.env` (32+ chars). See [SECURITY.md](SECURITY.md) before deploying.
 

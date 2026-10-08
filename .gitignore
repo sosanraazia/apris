@@ -51,3 +51,4 @@ apris-data-*
 *.db
 *.db-wal
 *.db-shm
+/backups/

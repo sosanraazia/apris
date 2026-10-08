@@ -11,6 +11,9 @@
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts",
     "seed:init": "tsx prisma/seed.ts --init",
+    "db:backup": "node scripts/backup-local.mjs",
+    "data:export": "bash deploy/data-export.sh",
+    "data:push": "bash deploy/data-push.sh",
     "dev:credentials": "tsx scripts/dev-credentials.ts",
     "admin:reset": "tsx scripts/admin-reset-password.ts",
     "prereq:reload": "tsx scripts/reload-prerequisites.ts"

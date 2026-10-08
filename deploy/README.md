@@ -1,5 +1,7 @@
 # Deploying APRIS on the university VM (Ubuntu)
 
+> **Windows Server instead of Ubuntu?** See [`windows/README.md`](windows/README.md) for the equivalent kit (PowerShell, NSSM service, IIS). The rest of this file describes the Ubuntu route.
+
 Target address: **https://apris.se.dsu.edu.pk** (change `DOMAIN` if IT picks another name).
 
 ## How updates work
