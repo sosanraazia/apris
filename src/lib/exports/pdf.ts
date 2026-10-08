@@ -42,7 +42,7 @@ export async function buildSlipsPdf(slips: Slip[], meta: { semester: string; gen
   const reg = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const stamp = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Karachi" }).format(meta.generatedAt);
-  const cols = [{ x: M, w: 74, h: "Course code" }, { x: M + 74, w: 232, h: "Course" }, { x: M + 306, w: 70, h: "Section" }, { x: M + 376, w: 60, h: "CBA" }, { x: M + 436, w: 63, h: "CH" }];
+  const cols = [{ x: M, w: 70, h: "Course code" }, { x: M + 70, w: 268, h: "Course" }, { x: M + 338, w: 62, h: "Section" }, { x: M + 400, w: 56, h: "CBA" }, { x: M + 456, w: 43, h: "CH" }];
 
   const header = (page: PDFPage, s: Slip, continued: boolean): number => {
     page.drawText("DHA SUFFA UNIVERSITY", { x: M, y: H - 52, size: 11, font: bold, color: TEAL });
@@ -71,18 +71,21 @@ export async function buildSlipsPdf(slips: Slip[], meta: { semester: string; gen
     let page = pdf.addPage([W, H]);
     let y = tableHead(page, header(page, s, false));
     s.items.forEach((i, n) => {
-      if (y < 110) { page = pdf.addPage([W, H]); y = tableHead(page, header(page, s, true)); }
-      if (n % 2 === 0) page.drawRectangle({ x: M, y: y - 5, width: W - 2 * M, height: 18, color: BAND });
+      // a long course name wraps onto further lines instead of being cut off
+      const nameLines = wrap(reg, i.courseName, 10, cols[1].w - 12);
+      const rowH = Math.max(1, nameLines.length) * 12 + 6;
+      if (y - rowH < 110) { page = pdf.addPage([W, H]); y = tableHead(page, header(page, s, true)); }
+      if (n % 2 === 0) page.drawRectangle({ x: M, y: y - rowH + 13, width: W - 2 * M, height: rowH, color: BAND });
       page.drawText(fit(reg, i.courseCode, 10, cols[0].w - 8), { x: cols[0].x + 6, y, size: 10, font: reg, color: INK });
-      page.drawText(fit(reg, i.courseName, 10, cols[1].w - 10), { x: cols[1].x + 6, y, size: 10, font: reg, color: INK });
+      nameLines.forEach((ln, k) => page.drawText(ln, { x: cols[1].x + 6, y: y - k * 12, size: 10, font: reg, color: INK }));
       page.drawText(fit(bold, i.section, 10, cols[2].w - 8), { x: cols[2].x + 6, y, size: 10, font: bold, color: INK });
       page.drawText(fit(reg, i.cbaCode, 10, cols[3].w - 8), { x: cols[3].x + 6, y, size: 10, font: reg, color: INK });
       page.drawText(String(i.ch), { x: cols[4].x + 6, y, size: 10, font: reg, color: INK });
-      y -= 18;
+      y -= rowH;
     });
     page.drawLine({ start: { x: M, y: y + 8 }, end: { x: W - M, y: y + 8 }, thickness: 0.8, color: LINE });
     page.drawText(`${s.items.length} courses`, { x: M + 6, y: y - 8, size: 10, font: reg, color: MUTED });
-    page.drawText(`Total credit hours: ${s.totalCH}`, { x: M + 306, y: y - 8, size: 10.5, font: bold, color: INK });
+    page.drawText(`Total credit hours: ${s.totalCH}`, { x: M + 338, y: y - 8, size: 10.5, font: bold, color: INK });
     wrap(reg, "This slip lists the courses and class sections recorded in APRIS for the registration version above. Please report any difference to your academic advisor.", 8.5, W - 2 * M).forEach((ln, k) => page.drawText(ln, { x: M, y: 80 - k * 11, size: 8.5, font: reg, color: MUTED }));
   }
   if (!slips.length) { const p = pdf.addPage([W, H]); p.drawText("No registrations.", { x: M, y: H - 100, size: 12, font: reg }); }

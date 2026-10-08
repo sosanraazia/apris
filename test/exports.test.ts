@@ -84,6 +84,12 @@ describe("combined PDF", () => {
   const text = async (buf: Buffer) => (await pdfPages(buf)).map((p) => p.flat.join("\n"));
   const meta = { semester: "Fall 2026", generatedAt: new Date("2026-10-06T10:00:00Z") };
 
+  it("never cuts a long course name off with '...': it wraps onto the next line", async () => {
+    const long = "Vulnerability Assessment & Reverse Engineering Laboratory Practicum With An Extremely Long Title";
+    const pages = await text(await buildSlipsPdf([slip("SE259010", "Long Name", [item("CYS-3503L", long, "SE-3A", "17462", 1)])], meta));
+    expect(pages[0]).not.toContain("...");
+    expect(pages[0]).toContain("Extremely Long Title");
+  });
   it("is a real PDF with one page per student showing name, ID, courses, sections and total", async () => {
     const buf = await buildSlipsPdf([a, b], meta);
     expect(buf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
