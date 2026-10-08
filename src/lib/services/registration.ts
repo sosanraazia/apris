@@ -30,10 +30,12 @@ export async function assertStudentAccess(session: Session, studentId: number) {
   return st;
 }
 
-async function chLookup() {
-  const rows = await db.posCourse.findMany({ select: { code: true, title: true, ch: true } });
+/** Credit hours by course. The student's own Plan of Study wins; other plans only fill gaps (the same title can carry different credit hours in different plans). */
+async function chLookup(posId: number | null) {
+  const rows = await db.posCourse.findMany({ select: { posId: true, code: true, title: true, ch: true } });
   const m = new Map<string, number>();
-  for (const r of rows) m.set(courseKey(r.code, r.title), r.ch);
+  for (const r of rows) if (r.posId !== posId) m.set(courseKey(r.code, r.title), r.ch);
+  for (const r of rows) if (r.posId === posId) m.set(courseKey(r.code, r.title), r.ch);
   return m;
 }
 
@@ -58,7 +60,7 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
   const offerings = await db.offering.findMany({ where: { id: { in: ids }, semesterId: semester.id, active: true } });
   if (offerings.length !== ids.length) throw new RegistrationError("One or more selected offerings are not part of the active semester");
 
-  const chMap = await chLookup();
+  const chMap = await chLookup(st.posId);
   const passed = new Set(ctx.progress.filter((p) => p.state === "COMPLETED").map((p) => courseKey(p.code, p.title)));
   const seenCourses = new Set<string>();
   const resolved: { offeringId: number; code: string; ch: number; reason: string; override: string | null; recommended: boolean; recItem?: RecItem }[] = [];
@@ -122,7 +124,7 @@ export async function saveDraft(session: Session, studentId: number, payload: Dr
   await db.$transaction([
     db.registrationItem.deleteMany({ where: { registrationId: reg.id } }),
     db.registrationItem.createMany({
-      data: resolved.map((r) => ({ registrationId: reg.id, posCourseCode: r.code, offeringId: r.offeringId, recommended: r.recommended, reason: r.reason, overrideReason: r.override })),
+      data: resolved.map((r) => ({ registrationId: reg.id, posCourseCode: r.code, offeringId: r.offeringId, recommended: r.recommended, reason: r.reason, overrideReason: r.override, ch: r.ch })),
     }),
     db.registration.update({ where: { id: reg.id }, data: { status: reg.version > 0 ? "MODIFIED" : "DRAFT", removals: JSON.stringify(removals) } }),
   ]);
@@ -158,7 +160,7 @@ export async function finalize(session: Session, studentId: number, changeReason
   if (!reg || !reg.items.length) throw new RegistrationError("Nothing to finalize — save a draft first");
 
   const offs = await db.offering.findMany({ where: { id: { in: reg.items.map((i) => i.offeringId) } } });
-  const chMap = await chLookup();
+  const chMap = await chLookup(st.posId);
   const problems: string[] = [];
   const finalItems: FinalItem[] = [];
   for (const o of offs) {
@@ -166,7 +168,7 @@ export async function finalize(session: Session, studentId: number, changeReason
     if (!o.cbaCode) problems.push(`${o.courseCode} (${o.section ?? "no section"}): missing CBA code`);
     if (!o.section) problems.push(`${o.courseCode}: missing section`);
     if (issues.some((i) => i.startsWith("Duplicate CBA"))) problems.push(`${o.courseCode} (${o.section}): CBA ${o.cbaCode} is duplicated in the offering sheet`);
-    finalItems.push({ courseCode: o.courseCode, courseName: o.courseName, cbaCode: o.cbaCode ?? "", section: o.section ?? "", ch: chMap.get(courseKey(o.courseCode, o.courseName)) ?? (/L$/.test(o.courseCode) ? 1 : 3) });
+    finalItems.push({ courseCode: o.courseCode, courseName: o.courseName, cbaCode: o.cbaCode ?? "", section: o.section ?? "", ch: reg.items.find((i) => i.offeringId === o.id)?.ch ?? chMap.get(courseKey(o.courseCode, o.courseName)) ?? (/L$/.test(o.courseCode) ? 1 : 3) });
   }
   if (problems.length) throw new RegistrationError("Can't finalize — offering data is incomplete. Ask an Admin to fix: " + problems.join("; "));
 

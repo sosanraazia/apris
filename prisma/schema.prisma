@@ -153,6 +153,7 @@ model RegistrationItem {
   recommended    Boolean      @default(false) // matches engine suggestion
   reason         String? // recommendation reason
   overrideReason String?
+  ch             Int? // credit hours as counted when the draft was saved (from the student's own plan); the receipt and exports use this
 }
 
 model RegistrationVersion {
