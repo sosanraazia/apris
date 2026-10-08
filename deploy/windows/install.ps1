@@ -35,7 +35,9 @@ if (-not (Get-LocalUser -Name $svcUser -ErrorAction SilentlyContinue)) {
   $newUser = $true
 } else { $newUser = $false }
 # the service account may run the app and write its data, nothing else
-& icacls $Base /inheritance:r /grant "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" | Out-Null
+& icacls $Base /inheritance:r | Out-Null
+& icacls $Base /grant "SYSTEM:(OI)(CI)F" | Out-Null
+& icacls $Base /grant "Administrators:(OI)(CI)F" | Out-Null
 & icacls "$Base\releases" /grant "${svcUser}:(OI)(CI)M" | Out-Null
 & icacls $Data /grant "${svcUser}:(OI)(CI)M" | Out-Null
 & icacls $Cfg /grant "${svcUser}:(OI)(CI)R" | Out-Null
@@ -59,13 +61,18 @@ DATABASE_URL=file:C:/apris/data/apris.db
 STORAGE_DIR=$Data\storage
 INITIAL_ADMIN_PASSWORD=$adminPw
 "@ | Set-Content -Path $EnvFile -Encoding ascii
-  & icacls $EnvFile /inheritance:r /grant "SYSTEM:F" "Administrators:F" "${svcUser}:R" | Out-Null
+  & icacls $EnvFile /inheritance:r | Out-Null
+  & icacls $EnvFile /grant "SYSTEM:F" | Out-Null
+  & icacls $EnvFile /grant "Administrators:F" | Out-Null
+  & icacls $EnvFile /grant "${svcUser}:R" | Out-Null
 }
 
 Write-Host "==> GitHub deploy key (read-only)"
 $Key = "$Ssh\id_ed25519"
 if (-not (Test-Path $Key)) { & cmd.exe /c "`"$SshKeygen`" -q -t ed25519 -N `"`" -C apris-deploy@$Domain -f `"$Key`""; if ($LASTEXITCODE -ne 0) { throw "ssh-keygen failed" } }
-& icacls $Ssh /inheritance:r /grant "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" | Out-Null   # OpenSSH refuses a key other accounts can read
+& icacls $Ssh /inheritance:r | Out-Null   # OpenSSH refuses a key other accounts can read
+& icacls $Ssh /grant "SYSTEM:(OI)(CI)F" | Out-Null
+& icacls $Ssh /grant "Administrators:(OI)(CI)F" | Out-Null
 $env:GIT_SSH_COMMAND = "ssh -i C:/apris/.ssh/id_ed25519 -o UserKnownHostsFile=C:/apris/.ssh/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o IdentitiesOnly=yes"
 $Keyscan = "$(Split-Path $SshKeygen)\ssh-keyscan.exe"
 if (-not (Test-Path "$Ssh\known_hosts")) { (& cmd.exe /c "`"$Keyscan`" -t ed25519 github.com 2>nul") | Set-Content -Path "$Ssh\known_hosts" -Encoding ascii }
