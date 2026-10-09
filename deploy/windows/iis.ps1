@@ -1,5 +1,5 @@
 <#
-Publishes APRIS through IIS with HTTPS (reverse proxy to 127.0.0.1:3000). Run elevated, after install.ps1:
+Publishes APRIS through IIS with HTTPS (Windows Server, or Windows 10/11 for testing) (reverse proxy to 127.0.0.1:3000). Run elevated, after install.ps1:
 
   powershell -ExecutionPolicy Bypass -File C:\apris\bootstrap\deploy\windows\iis.ps1 -Domain apris.se.dsu.edu.pk -CertThumbprint <thumbprint>
 
@@ -13,10 +13,15 @@ param(
 )
 $ErrorActionPreference = "Stop"
 Import-Module WebAdministration -ErrorAction SilentlyContinue
-if (-not (Get-Command Install-WindowsFeature -ErrorAction SilentlyContinue)) { throw "This must run on Windows Server." }
 
 Write-Host "==> IIS role"
-Install-WindowsFeature Web-Server, Web-Filtering, Web-Http-Logging, Web-Mgmt-Console | Out-Null
+if (Get-Command Install-WindowsFeature -ErrorAction SilentlyContinue) {
+  # Windows Server
+  Install-WindowsFeature Web-Server, Web-Filtering, Web-Http-Logging, Web-Mgmt-Console, Web-Scripting-Tools | Out-Null
+} else {
+  # Windows 10 / 11 (client editions)
+  Enable-WindowsOptionalFeature -Online -All -NoRestart -FeatureName IIS-WebServerRole, IIS-WebServer, IIS-CommonHttpFeatures, IIS-StaticContent, IIS-DefaultDocument, IIS-RequestFiltering, IIS-HttpLogging, IIS-ManagementConsole, IIS-ManagementScriptingTools | Out-Null
+}
 Import-Module WebAdministration
 
 if (-not (Test-Path "$env:windir\System32\inetsrv\rewrite.dll")) { throw "IIS URL Rewrite module is not installed." }

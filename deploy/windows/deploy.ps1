@@ -70,6 +70,7 @@ for ($i = 0; $i -lt 30; $i++) {
       Remove-Item "$Data\failed-sha" -Force -ErrorAction SilentlyContinue
       Log "deployed $New OK"
       foreach ($f in "deploy.ps1", "run.ps1", "backup.ps1") { Copy-Item "$Rel\deploy\windows\$f" "$Base\$f.new" -Force; Move-Item "$Base\$f.new" "$Base\$f" -Force }   # the tasks run these stable copies
+      New-Item -ItemType Directory -Force "$Base\bootstrap\deploy\windows" | Out-Null; Copy-Item "$Rel\deploy\windows\*" "$Base\bootstrap\deploy\windows\" -Force   # keeps iis.ps1, data-import.ps1 and web.config current
       Get-ChildItem "$Base\releases" -Directory | Sort-Object LastWriteTime -Descending | Select-Object -Skip 3 | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue   # keep the 3 newest
       Get-ChildItem "$Data\backups" -Filter "pre-*.db" | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force
       $lock.Close(); exit 0
