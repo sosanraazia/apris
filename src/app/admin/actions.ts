@@ -9,6 +9,7 @@ import { RosterError, applyRosterDraft, buildRosterDraft, loadRosterDraft } from
 import { PosError, applyPosDraft, buildPosDraft, loadPosDraft, setPosPublished } from "@/lib/services/pos";
 import { audit } from "@/lib/services/audit";
 import { setElectiveCourse } from "@/lib/services/electives";
+import { validateRule } from "@/lib/services/prerequisites";
 import { applyOfferingDraft, buildOfferingDraft, loadOfferingDraft, refreshIssues } from "@/lib/services/offerings";
 import type { Settings } from "@/lib/rules/types";
 
@@ -208,4 +209,40 @@ export async function setElectiveAction(form: FormData) {
   await setElectiveCourse(posCode, category, slot, title || null);
   await audit({ userId: s.userId, action: "ELECTIVE_MAPPING_CHANGED", before: { course: before?.courseTitle ?? null }, after: { course: title || null }, reason: `${posCode} ${category} elective ${slot}` });
   revalidatePath("/admin/electives");
+}
+
+type PrereqResult = { ok?: string; error?: string } | undefined;
+
+export async function addPrerequisiteAction(_: PrereqResult, form: FormData): Promise<PrereqResult> {
+  const s = await requireRole("ADMIN");
+  const v = await validateRule(String(form.get("course") ?? "").trim(), String(form.get("prerequisite") ?? "").trim());
+  if ("error" in v) return { error: v.error };
+  await db.prerequisite.create({ data: { course: v.course, prerequisite: v.prerequisite, rule: "Must Pass" } });
+  await audit({ userId: s.userId, action: "PREREQUISITE_ADDED", after: { course: v.course, prerequisite: v.prerequisite } });
+  revalidatePath("/admin/prerequisites");
+  return { ok: `Added: ${v.course} needs ${v.prerequisite}.` };
+}
+
+export async function updatePrerequisiteAction(_: PrereqResult, form: FormData): Promise<PrereqResult> {
+  const s = await requireRole("ADMIN");
+  const id = Number(form.get("id"));
+  const cur = await db.prerequisite.findUnique({ where: { id } });
+  if (!cur) return { error: "That rule no longer exists." };
+  const v = await validateRule(cur.course, String(form.get("prerequisite") ?? "").trim(), id);
+  if ("error" in v) return { error: v.error };
+  if (v.prerequisite === cur.prerequisite) return { ok: "No change." };
+  await db.prerequisite.update({ where: { id }, data: { prerequisite: v.prerequisite } });
+  await audit({ userId: s.userId, action: "PREREQUISITE_CHANGED", before: { course: cur.course, prerequisite: cur.prerequisite }, after: { course: cur.course, prerequisite: v.prerequisite } });
+  revalidatePath("/admin/prerequisites");
+  return { ok: `${cur.course} now needs ${v.prerequisite}.` };
+}
+
+export async function removePrerequisiteAction(form: FormData) {
+  const s = await requireRole("ADMIN");
+  const id = Number(form.get("id"));
+  const cur = await db.prerequisite.findUnique({ where: { id } });
+  if (!cur) return;
+  await db.prerequisite.delete({ where: { id } });
+  await audit({ userId: s.userId, action: "PREREQUISITE_REMOVED", before: { course: cur.course, prerequisite: cur.prerequisite } });
+  revalidatePath("/admin/prerequisites");
 }

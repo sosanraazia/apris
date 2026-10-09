@@ -105,14 +105,15 @@ describe.skipIf(!HAS_SAMPLES)("rules on synthetic students", () => {
 
   it("blocks a course whose prerequisite was failed, and explains why", async () => {
     const { student, off, prereqs } = await sample("SE-3A");
-    // Programming Fundamentals failed (F) → DSA + OOP-dependent courses must block
-    const attempts = student.attempts.map((a) => (a.code === "CS-1002" ? { ...a, grade: "F", gradePoint: 0 } : a));
+    // Object Oriented Programming failed (F) → Data Structures (which needs OOP) must block
+    const attempts = student.attempts.map((a) => (/^object oriented programming$/i.test(a.title.trim()) ? { ...a, grade: "F", gradePoint: 0 } : a));
+    expect(attempts.some((a) => a.grade === "F")).toBe(true);
     const rec = recommend({ ...student, attempts }, prereqs, off, DEFAULT_SETTINGS);
     const dsa = rec.items.find((i) => i.code === "CS-2007")!;
     expect(dsa.status).toBe("BLOCKED");
-    expect(dsa.reason).toContain("Programming Fundamentals");
-    // the Fall workbook has no semester-1 sheet, so the retake can't be scheduled — surfaced, not hidden
-    expect(rec.items.find((i) => i.code === "CS-1002")?.status).toBe("NOT_OFFERED");
+    expect(dsa.reason).toContain("Object Oriented Programming");
+    // the Fall workbook has no semester-2 sheet, so the retake can't be scheduled — surfaced, not hidden
+    expect(rec.items.find((i) => /^object oriented programming$/i.test(i.title))?.status).toBe("NOT_OFFERED");
   });
 
   it("FYP-I eligibility switches exactly at the configured threshold", async () => {
