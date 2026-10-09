@@ -12,8 +12,8 @@ if [ -z "${YES:-}" ]; then
   read -r -p "Type REPLACE to continue: " ans; [ "$ans" = "REPLACE" ] || { echo "Cancelled."; exit 1; }
 fi
 TMP=$(mktemp -d); chmod 700 "$TMP"; trap 'rm -rf "$TMP"' EXIT
-PASS_ARGS=(); [ -n "${APRIS_DATA_PASSPHRASE:-}" ] && PASS_ARGS=(-pass env:APRIS_DATA_PASSPHRASE)
-openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 "${PASS_ARGS[@]}" -in "$IN" | tar -C "$TMP" -xf -
+if [ -z "${APRIS_DATA_PASSPHRASE:-}" ]; then read -rs -p "Passphrase of the file: " APRIS_DATA_PASSPHRASE; echo; export APRIS_DATA_PASSPHRASE; fi
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:APRIS_DATA_PASSPHRASE -in "$IN" | tar -C "$TMP" -xf -
 [ "$(sqlite3 "$TMP/apris.db" 'pragma integrity_check;')" = "ok" ] || { echo "The database in the file is damaged; nothing was changed." >&2; exit 1; }
 
 mkdir -p "$DATA/backups" "$DATA/storage"
