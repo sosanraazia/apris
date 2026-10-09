@@ -9,7 +9,8 @@ certificate (.pfx) into the machine's Personal store (certlm.msc). The thumbprin
 param(
   [Parameter(Mandatory = $true)][string]$Domain,
   [Parameter(Mandatory = $true)][string]$CertThumbprint,
-  [string]$SiteRoot = "C:\inetpub\apris"
+  [string]$SiteRoot = "C:\inetpub\apris",
+  [switch]$SkipModuleCheck   # only if you are sure URL Rewrite and ARR are installed and the check above is wrong
 )
 $ErrorActionPreference = "Stop"
 Import-Module WebAdministration -ErrorAction SilentlyContinue
@@ -24,10 +25,15 @@ if (Get-Command Install-WindowsFeature -ErrorAction SilentlyContinue) {
 }
 Import-Module WebAdministration
 
-if (-not (Test-Path "$env:windir\System32\inetsrv\rewrite.dll")) { throw "IIS URL Rewrite module is not installed." }
-# ARR installs its module under Program Files\IIS (not inetsrv) and registers it with IIS as a global module
-$arrFound = (Test-Path "$env:windir\System32\inetsrv\requestRouter.dll") -or (Test-Path "$env:ProgramFiles\IIS\Application Request Routing\requestRouter.dll") -or [bool](Get-WebGlobalModule -Name "ApplicationRequestRouting" -ErrorAction SilentlyContinue)
-if (-not $arrFound) { throw "IIS Application Request Routing (ARR) module is not installed." }
+if (-not $SkipModuleCheck) {
+  $hostConfig = "$env:windir\System32\inetsrv\config\applicationHost.config"
+  $rewriteFound = (Test-Path "$env:windir\System32\inetsrv\rewrite.dll") -or (Select-String -Path $hostConfig -Pattern "rewrite.dll" -Quiet)
+  # ARR installs under Program Files\IIS and registers itself in applicationHost.config
+  $arrFound = (Test-Path "$env:windir\System32\inetsrv\requestRouter.dll") -or (Test-Path "$env:ProgramFiles\IIS\Application Request Routing\requestRouter.dll") -or (Select-String -Path $hostConfig -Pattern "requestRouter.dll" -Quiet)
+  Write-Host "URL Rewrite found: $rewriteFound   ARR found: $arrFound"
+  if (-not $rewriteFound) { throw "IIS URL Rewrite module is not installed. (Run with -SkipModuleCheck to ignore this check.)" }
+  if (-not $arrFound) { throw "IIS Application Request Routing (ARR) module is not installed. (Run with -SkipModuleCheck to ignore this check.)" }
+}
 $cert = Get-ChildItem "Cert:\LocalMachine\My" | Where-Object { $_.Thumbprint -eq ($CertThumbprint -replace '\s', '').ToUpper() }
 if (-not $cert) { throw "Certificate $CertThumbprint not found in LocalMachine\My." }
 
