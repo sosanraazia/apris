@@ -2,7 +2,9 @@
 
 > **Windows Server instead of Ubuntu?** See [`windows/README.md`](windows/README.md) for the equivalent kit (PowerShell, NSSM service, IIS). The rest of this file describes the Ubuntu route.
 
-Target address: **https://apris.se.dsu.edu.pk** (change `DOMAIN` if IT picks another name).
+> **Host name and certificate:** the university certificate is a wildcard (`*.dsu.edu.pk`), which covers **one** name level only. `apris.dsu.edu.pk` is covered; `apris.se.dsu.edu.pk` is **not**. Use a single-level name, or get a certificate for the exact name.
+
+Target address: **https://apris.dsu.edu.pk** (change `DOMAIN` if IT picks another name).
 
 ## How updates work
 
@@ -22,7 +24,7 @@ Data never lives in the git checkout: database `/var/lib/apris/apris.db`, upload
 ## Ask university IT for (one-time)
 
 1. A VM: Ubuntu 22.04/24.04, 2 vCPU, 4 GB RAM, 20 GB disk, and `sudo` for you.
-2. DNS record `apris.se.dsu.edu.pk` → the VM's IP.
+2. DNS record `apris.dsu.edu.pk` → the VM's IP.
 3. Firewall: inbound **80** and **443**. Outbound **443** to `github.com` **and SSH (22) to `github.com`** (or use `ssh.github.com:443`), plus `registry.npmjs.org`, `binaries.prisma.sh`, `deb.nodesource.com` and Ubuntu apt mirrors. (Without outbound access to these the VM can't build.)
 4. Confirmation that storing student names / grades / transcripts on this VM is approved, and how the VM disk is backed up off-machine.
 6. Either permission for a Let's Encrypt certificate, or a university-issued TLS certificate.
@@ -38,7 +40,7 @@ The repository is **private**, so the VM cannot clone it over plain HTTPS. The V
 2. On the VM, run the installer:
    ```bash
    cd /tmp/apris-deploy
-   sudo DOMAIN=apris.se.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
+   sudo DOMAIN=apris.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
    ```
 3. When it prints `Add this public key as a READ-ONLY deploy key…` and shows a line starting with `ssh-ed25519`, **copy that whole line** and add it in GitHub (you need to be an admin of the repo):
    *GitHub → `sosanraazia/apris` → Settings → Deploy keys → Add deploy key* → title `apris-vm`, paste the key, **leave "Allow write access" unticked**, Add key. Then go back to the VM terminal and press Enter. The script checks the key works before it continues.
@@ -52,7 +54,7 @@ The script asks for an initial admin password, generates a session secret and a 
 
 Afterwards:
 0. Put the SMTP details in `/etc/apris/apris.env` (see `apris.env.example`), `sudo systemctl restart apris`, then **Admin → Emails → Send test**. Use `EMAIL_REDIRECT_TO` during the pilot.
-1. Open https://apris.se.dsu.edu.pk, log in as `admin`.
+1. Open https://apris.dsu.edu.pk, log in as `admin`.
 2. You will be asked to change the initial password immediately (the installer has already removed it from `/etc/apris/apris.env`).
 3. **Admin → Manage users**: create the advisors and the HoD. Each gets a temporary password and must change it at first login.
 4. **Admin → offering rows needing attention**: enter the missing CBA codes / sections.

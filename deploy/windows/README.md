@@ -19,9 +19,11 @@ For Windows Server 2019 / 2022. This is the same design as the Ubuntu kit in `de
 
 Folders: `C:\apris\releases\<commit>` (3 newest kept), `C:\apris\current` (junction to the live release), `C:\apris\repo.git` (mirror), `C:\apris\config\apris.env` (secrets, server only), `C:\apris\data` (database `apris.db`, `storage\` uploads, `deploy.log`, `logs\`, pre-deploy backups). Deploys never touch `data` or `config`.
 
+> **Host name and certificate:** the university certificate is a wildcard (`*.dsu.edu.pk`), which covers **one** name level only. `apris.dsu.edu.pk` is covered; `apris.se.dsu.edu.pk` is **not**. Use a single-level name, or get a certificate for the exact name.
+
 ## What to ask IT for
 1. A Windows Server with **Windows PowerShell 5.1**, Administrator access, and 2 vCPU / 4 GB RAM / 40 GB disk (BitLocker on the data disk).
-2. DNS name (e.g. `apris.se.dsu.edu.pk`) and a **TLS certificate (.pfx)** for it.
+2. DNS name (e.g. `apris.dsu.edu.pk`) and a **TLS certificate (.pfx)** for it.
 3. Inbound **80 and 443**. Outbound: **SSH (22) to `github.com`** (or `ssh.github.com:443`), HTTPS to `registry.npmjs.org`, `binaries.prisma.sh`, `github.com`, and SMTP (host/port/account allowed to send as `no-reply@dsu.edu.pk`).
 4. Permission to install: **Node.js 22 LTS**, **Git for Windows**, **NSSM**, and the IIS modules **URL Rewrite** and **Application Request Routing**.
 5. Off-server backup of `C:\apris\backups` (the server's own copy is not enough) and data-storage approval for student records.
@@ -40,16 +42,16 @@ On the server, in an **elevated Windows PowerShell**:
 3. Run the installer:
    ```powershell
    cd <folder you copied>
-   powershell -ExecutionPolicy Bypass -File .\install.ps1 -Domain apris.se.dsu.edu.pk -Repo git@github.com:sosanraazia/apris.git
+   powershell -ExecutionPolicy Bypass -File .\install.ps1 -Domain apris.dsu.edu.pk -Repo git@github.com:sosanraazia/apris.git
    ```
    It asks for the initial admin password (6+ characters), creates the `apris` account, folders and permissions, generates a session secret and the **read-only deploy key**, then **prints the key and waits**.
 4. **Add the key on GitHub** (repo owner/admin): `sosanraazia/apris` → Settings → Deploy keys → Add deploy key → title `apris-windows`, paste the whole `ssh-ed25519 …` line, leave **Allow write access unticked**. Back in PowerShell press Enter. The installer clones the repo, builds and starts the first release (a few minutes), removes the initial password from the env file, registers the two scheduled tasks and opens ports 80/443.
 5. Check it: `Invoke-WebRequest http://127.0.0.1:3000/api/health` should say `{"ok":true}`.
 6. Import the certificate into the machine store (`certlm.msc` → Personal → Certificates → import the `.pfx`), note its **thumbprint** (certificate → Details), then publish through IIS:
    ```powershell
-   powershell -ExecutionPolicy Bypass -File C:\apris\bootstrap\deploy\windows\iis.ps1 -Domain apris.se.dsu.edu.pk -CertThumbprint <thumbprint>
+   powershell -ExecutionPolicy Bypass -File C:\apris\bootstrap\deploy\windows\iis.ps1 -Domain apris.dsu.edu.pk -CertThumbprint <thumbprint>
    ```
-   Open `https://apris.se.dsu.edu.pk` and sign in as `admin`; you must change the password at first login.
+   Open `https://apris.dsu.edu.pk` and sign in as `admin`; you must change the password at first login.
 7. Fill in the email settings (`SMTP_*`, `EMAIL_FROM`; use `EMAIL_REDIRECT_TO` during the pilot) in `C:\apris\config\apris.env` (template: `apris.env.example`), then `Restart-Service apris` and use Admin → Emails → Send test.
 
 ## Everyday operations

@@ -1,7 +1,7 @@
 <#
 Publishes APRIS through IIS with HTTPS (Windows Server, or Windows 10/11 for testing) (reverse proxy to 127.0.0.1:3000). Run elevated, after install.ps1:
 
-  powershell -ExecutionPolicy Bypass -File C:\apris\bootstrap\deploy\windows\iis.ps1 -Domain apris.se.dsu.edu.pk -CertThumbprint <thumbprint>
+  powershell -ExecutionPolicy Bypass -File C:\apris\bootstrap\deploy\windows\iis.ps1 -Domain apris.dsu.edu.pk -CertThumbprint <thumbprint>
 
 Before running: install the Microsoft IIS modules "URL Rewrite" and "Application Request Routing" (ask IT), and import the university-issued
 certificate (.pfx) into the machine's Personal store (certlm.msc). The thumbprint is on the certificate's Details tab.

@@ -1,12 +1,12 @@
 <#
 First-time install on Windows Server 2019/2022. Run ONCE from an elevated PowerShell (Run as Administrator):
 
-  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Domain apris.se.dsu.edu.pk -Repo git@github.com:sosanraazia/apris.git
+  powershell -ExecutionPolicy Bypass -File .\install.ps1 -Domain apris.dsu.edu.pk -Repo git@github.com:sosanraazia/apris.git
 
 Use Windows PowerShell 5.1 (the default on Windows Server). Prerequisites (see deploy\windows\README.md): Node.js 22+, Git for Windows, NSSM. Re-running is safe: the env file, keys and database are kept.
 #>
 param(
-  [string]$Domain = "apris.se.dsu.edu.pk",
+  [string]$Domain = "apris.dsu.edu.pk",
   [string]$Repo = "git@github.com:sosanraazia/apris.git",
   [string]$Branch = "clean-main"
 )

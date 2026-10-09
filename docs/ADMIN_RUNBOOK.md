@@ -197,7 +197,7 @@ The set of single-section programs is `SINGLE_SECTION_PROGRAMS` in `src/lib/rost
 
 # Part B — Server operations (IT / sysadmin)
 
-The app runs on the university Ubuntu VM at `https://apris.se.dsu.edu.pk`. Setup is in `deploy/README.md`; this is the day-to-day.
+The app runs on the university Ubuntu VM at `https://apris.dsu.edu.pk`. Setup is in `deploy/README.md`; this is the day-to-day.
 
 | Task | Command |
 |---|---|

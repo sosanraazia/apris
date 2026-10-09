@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// APP_DOMAIN e.g. "apris.se.dsu.edu.pk" — lets Server Actions accept requests forwarded by nginx.
+// APP_DOMAIN e.g. "apris.dsu.edu.pk" — lets Server Actions accept requests forwarded by nginx.
 const domain = process.env.APP_DOMAIN;
 const prod = process.env.NODE_ENV === "production";
 

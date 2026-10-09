@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # First-time install on Ubuntu 22.04/24.04. Run once as root:
-#   sudo DOMAIN=apris.se.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
+#   sudo DOMAIN=apris.dsu.edu.pk REPO=git@github.com:sosanraazia/apris.git CERT_EMAIL=you@dsu.edu.pk bash install.sh
 # Re-running is safe: existing env file, keys, database and certificates are kept.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Run as root (sudo)."; exit 1; }
 
-DOMAIN="${DOMAIN:-apris.se.dsu.edu.pk}"
+DOMAIN="${DOMAIN:-apris.dsu.edu.pk}"
 REPO="${REPO:-git@github.com:sosanraazia/apris.git}"
 BRANCH="${APRIS_BRANCH:-clean-main}"
 CERT_EMAIL="${CERT_EMAIL:-}"

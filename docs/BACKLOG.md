@@ -34,7 +34,7 @@ Last updated: 2026-09-29 · Live branch: `clean-main` · Source of scope: [PRD](
 | ID | Item | Owner | Size | Done when |
 |---|---|---|---|---|
 | G-01 | Confirm the target semester and deadline (Fall 2026 window vs Spring 2027) | HoD | S | Written date agreed |
-| G-02 | Request VM, DNS `apris.se.dsu.edu.pk`, ports 80/443, outbound access (GitHub, npm, Prisma), TLS certificate | Dev → IT | S | IT ticket accepted with dates |
+| G-02 | Request VM, DNS `apris.dsu.edu.pk`, ports 80/443, outbound access (GitHub, npm, Prisma), TLS certificate | Dev → IT | S | IT ticket accepted with dates |
 | G-03 | Written IT/compliance approval to store student data on the VM; disk encryption; off-VM backup location | HoD + IT | M | Approval on file |
 | G-04 | **First install on the VM** with IT; fix whatever differs from `deploy/README.md` | Dev + IT | M | https works; auto-deploy from `clean-main` proven; rollback tried once |
 | G-05 | Branch protection on `clean-main` (pull request + CI required) | Dev | S | Setting enabled |
