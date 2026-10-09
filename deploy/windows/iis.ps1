@@ -25,7 +25,9 @@ if (Get-Command Install-WindowsFeature -ErrorAction SilentlyContinue) {
 Import-Module WebAdministration
 
 if (-not (Test-Path "$env:windir\System32\inetsrv\rewrite.dll")) { throw "IIS URL Rewrite module is not installed." }
-if (-not (Test-Path "$env:windir\System32\inetsrv\requestRouter.dll")) { throw "IIS Application Request Routing (ARR) module is not installed." }
+# ARR installs its module under Program Files\IIS (not inetsrv) and registers it with IIS as a global module
+$arrFound = (Test-Path "$env:windir\System32\inetsrv\requestRouter.dll") -or (Test-Path "$env:ProgramFiles\IIS\Application Request Routing\requestRouter.dll") -or [bool](Get-WebGlobalModule -Name "ApplicationRequestRouting" -ErrorAction SilentlyContinue)
+if (-not $arrFound) { throw "IIS Application Request Routing (ARR) module is not installed." }
 $cert = Get-ChildItem "Cert:\LocalMachine\My" | Where-Object { $_.Thumbprint -eq ($CertThumbprint -replace '\s', '').ToUpper() }
 if (-not $cert) { throw "Certificate $CertThumbprint not found in LocalMachine\My." }
 
