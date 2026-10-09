@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
+import { registeredWithoutPrerequisite } from "@/lib/services/prerequisites";
 import { Badge, Card, td, th } from "@/components/ui";
 
 export default async function Exceptions() {
@@ -27,6 +28,8 @@ export default async function Exceptions() {
     if (["FROZEN", "INACTIVE", "WITHDRAWN"].includes(st.standing)) ex.push({ student: st.registrationId, id: st.id, kind: "Non-active standing", severity: "Low", owner: "Advisor", detail: st.standing });
   }
   for (const o of overrides.filter((x) => !x.overrideReason?.startsWith("Manual registration"))) ex.push({ student: o.registration.student.registrationId, id: o.registration.studentId, kind: "Advisor override", severity: "Low", owner: "HoD", detail: `${o.posCourseCode}: ${o.overrideReason}` });
+  for (const v of await registeredWithoutPrerequisite())
+    ex.push({ student: v.registrationId, id: v.studentId, kind: "Registered without the prerequisite", severity: "High", owner: "Advisor", detail: `${v.courseCode} ${v.courseName}: ${v.reason} Remove it with an add/drop change (student → Registration tab), or keep it with a recorded reason.` });
   const tone = { High: "red", Medium: "amber", Low: "slate" } as const;
   return (
     <div className="space-y-4">
